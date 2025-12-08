@@ -1,0 +1,27 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model AppUser {
+  id        String   @id @db.Char(36)     // sub din Keycloak
+  email     String   @unique
+  role      String
+  children  Child[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Child {
+  id          String   @id @default(uuid()) @db.Char(36)
+  name        String
+  class       String
+  parentEmail String
+  parentId    String?  @db.Char(36)
+  parent      AppUser? @relation(fields: [parentId], references: [id])
+  allergies   Json?
+  createdAt   DateTime @default(now())
+}
