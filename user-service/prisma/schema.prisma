@@ -4,15 +4,16 @@ generator client {
 
 datasource db {
   provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 model AppUser {
-  id        String   @id @db.Char(36)     // sub din Keycloak
+  id        String   @id @db.Char(36)
   email     String   @unique
   role      String
-  children  Child[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  children  Child[]
 }
 
 model Child {
@@ -21,7 +22,9 @@ model Child {
   class       String
   parentEmail String
   parentId    String?  @db.Char(36)
-  parent      AppUser? @relation(fields: [parentId], references: [id])
   allergies   Json?
   createdAt   DateTime @default(now())
+  parent      AppUser? @relation(fields: [parentId], references: [id])
+
+  @@index([parentId], map: "Child_parentId_fkey")
 }
