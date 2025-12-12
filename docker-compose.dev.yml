@@ -12,6 +12,12 @@ services:
       - school-net
     volumes:
       - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
 
   keycloak-db:
     image: postgres:15
@@ -54,8 +60,26 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - mysql
-      - keycloak
+      mysql:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    networks:
+      - school-net
+
+  menu-service:
+    build:
+      context: ./menu-service
+    container_name: menu-service
+    env_file:
+      - ./menu-service/.env.docker
+    ports:
+      - "3001:3001"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
     networks:
       - school-net
 
