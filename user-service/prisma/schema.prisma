@@ -13,6 +13,7 @@ model AppUser {
   role      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
   children  Child[]
 }
 
@@ -24,6 +25,7 @@ model Child {
   parentId    String?  @db.Char(36)
   allergies   Json?
   createdAt   DateTime @default(now())
+
   parent      AppUser? @relation(fields: [parentId], references: [id])
 
   @@index([parentId], map: "Child_parentId_fkey")

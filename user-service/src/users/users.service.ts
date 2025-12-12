@@ -11,20 +11,21 @@ type KeycloakUserInfo = {
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private mapRole(roles: string[]): 'parent' | 'teacher' | 'admin' | 'child' {
+  private mapRole(roles: string[]): 'parent' | 'teacher' | 'admin' {
     if (roles.includes('admin')) return 'admin';
     if (roles.includes('teacher')) return 'teacher';
-    // pentru moment default: parent
     return 'parent';
   }
 
   async provisionUserAndGetChildren(info: KeycloakUserInfo) {
     const { sub, email, roles } = info;
 
+    // 1. verificăm dacă utilizatorul există în MySQL
     let user = await this.prisma.appUser.findUnique({
       where: { id: sub },
     });
 
+    // 2. dacă nu există → îl creăm
     if (!user) {
       user = await this.prisma.appUser.create({
         data: {
@@ -34,7 +35,7 @@ export class UsersService {
         },
       });
 
-      // prima logare: atașăm copii prin parentEmail
+      // atașăm copiii din bază după email-ul părintelui
       await this.prisma.child.updateMany({
         where: {
           parentEmail: email,
@@ -46,6 +47,7 @@ export class UsersService {
       });
     }
 
+    // 3. obținem copiii legați de acest utilizator
     const children = await this.prisma.child.findMany({
       where: { parentId: sub },
     });
@@ -53,15 +55,9 @@ export class UsersService {
     return { user, children };
   }
 
-  async getChildForUser(childId: string, parentId: string) {
-    const child = await this.prisma.child.findUnique({
-      where: { id: childId },
+  async getChildrenForParent(parentId: string) {
+    return this.prisma.child.findMany({
+      where: { parentId },
     });
-
-    if (!child || child.parentId !== parentId) {
-      return null;
-    }
-
-    return child;
   }
 }

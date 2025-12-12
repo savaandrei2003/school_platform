@@ -2,12 +2,12 @@ import { Module } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { PrismaModule } from '../prisma/prisma.module';
-import { KeycloakAuthGuard } from '../auth/keycloak-auth.guard';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, AuthModule],
   controllers: [UsersController],
-  providers: [UsersService, KeycloakAuthGuard],
+  providers: [UsersService],
   exports: [UsersService],
 })
 export class UsersModule {}

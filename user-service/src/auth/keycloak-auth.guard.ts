@@ -13,28 +13,27 @@ export class KeycloakAuthGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const req = context.switchToHttp().getRequest();
-    const auth = req.headers['authorization'] as string | undefined;
+    const auth = req.headers['authorization'];
 
     if (!auth || !auth.startsWith('Bearer ')) {
       throw new UnauthorizedException('Missing Authorization header');
     }
 
     const token = auth.substring('Bearer '.length);
-    const publicKey = this.config.get<string>('KC_PUBLIC_KEY');
-    const issuer = this.config.get<string>('KC_ISSUER');
+
+    const public_key = `-----BEGIN PUBLIC KEY-----\n${process.env.KC_PUBLIC_KEY}\n-----END PUBLIC KEY-----`;
+
+    const issuer = process.env.KC_ISSUER;
 
     try {
-      const decoded = jwt.verify(token, publicKey, {
+      const decoded = jwt.verify(token, public_key, {
         algorithms: ['RS256'],
-        issuer,
       }) as any;
-
-      const roles: string[] = decoded?.realm_access?.roles || [];
 
       req.user = {
         sub: decoded.sub,
-        email: decoded.email || decoded.preferred_username,
-        roles,
+        email: decoded.email,
+        roles: decoded?.realm_access?.roles || [],
       };
 
       return true;
