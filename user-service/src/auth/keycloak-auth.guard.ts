@@ -38,7 +38,7 @@ export class KeycloakAuthGuard implements CanActivate {
 
       return true;
     } catch (e) {
-      console.error('JWT verify error', e);
+      // console.error('JWT verify error', e);
       throw new UnauthorizedException('Invalid token');
     }
   }
