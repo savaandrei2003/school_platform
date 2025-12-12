@@ -25,6 +25,8 @@ export class UsersService {
       where: { id: sub },
     });
 
+    let message = '';
+
     // 2. dacă nu există → îl creăm
     if (!user) {
       user = await this.prisma.appUser.create({
@@ -45,19 +47,33 @@ export class UsersService {
           parentId: sub,
         },
       });
+
+      message = 'User created successfully';
+    } else {
+      message = 'User already exists';
     }
 
-    // 3. obținem copiii legați de acest utilizator
     const children = await this.prisma.child.findMany({
       where: { parentId: sub },
     });
+    
 
-    return { user, children };
+    return { user, children, message };
   }
 
   async getChildrenForParent(parentId: string) {
     return this.prisma.child.findMany({
       where: { parentId },
+    });
+  }
+
+  async deleteUser(userId: string) {
+    await this.prisma.child.deleteMany({
+      where: { parentId: userId },
+    });
+
+    await this.prisma.appUser.delete({
+      where: { id: userId },
     });
   }
 }
