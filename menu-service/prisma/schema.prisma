@@ -7,18 +7,32 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Menu {
-  id          String       @id @default(uuid()) @db.Char(36)
-  date        DateTime
-  title       String
-  createdAt  DateTime     @default(now())
-  items       MenuItem[]
+enum MenuCategory {
+  SOUP
+  MAIN
+  DESSERT
+  RESERVE
 }
 
-model MenuItem {
-  id        String   @id @default(uuid()) @db.Char(36)
+model DailyMenu {
+  id        String      @id @default(uuid()) @db.Char(36)
+  date      DateTime    @unique @db.Date
+  title     String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  options   MenuOption[]
+}
+
+model MenuOption {
+  id        String       @id @default(uuid()) @db.Char(36)
+  menuId    String       @db.Char(36)
+  menu      DailyMenu    @relation(fields: [menuId], references: [id], onDelete: Cascade)
+
+  category  MenuCategory
   name      String
   allergens Json?
-  menuId    String   @db.Char(36)
-  menu      Menu     @relation(fields: [menuId], references: [id])
+  isDefault Boolean      @default(false)
+
+  @@index([menuId, category])
 }

@@ -1,37 +1,108 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateDailyMenuDto } from './dto/create-daily-menu.dto';
+import { ValidateOrderDto } from './dto/validate-order.dto';
 
 @Injectable()
 export class MenusService {
   constructor(private readonly prisma: PrismaService) {}
 
-  createMenu(date: string, title: string) {
-    return this.prisma.menu.create({
-      data: {
-        date: new Date(date),
-        title,
-      },
-    });
+  async createDailyMenu(dto: CreateDailyMenuDto) {
+    const date = new Date(dto.date);
+
+    // opțional: asigură-te că există max 1 default per categorie
+    const defaultsByCategory = new Map<string, number>();
+    for (const opt of dto.options) {
+      if (opt.isDefault) {
+        defaultsByCategory.set(opt.category, (defaultsByCategory.get(opt.category) ?? 0) + 1);
+      }
+    }
+    for (const [cat, cnt] of defaultsByCategory.entries()) {
+      if (cnt > 1) throw new BadRequestException(`Multiple defaults for category ${cat}`);
+    }
+
+    try {
+      return await this.prisma.dailyMenu.create({
+        data: {
+          date,
+          title: dto.title,
+          options: {
+            create: dto.options.map(o => ({
+              category: o.category,
+              name: o.name,
+              allergens: o.allergens ?? undefined,
+              isDefault: o.isDefault ?? false,
+            })),
+          },
+        },
+        include: { options: true },
+      });
+    } catch (e: any) {
+      // date unique constraint
+      throw new BadRequestException('DailyMenu already exists for this date');
+    }
   }
 
-  addItem(menuId: string, name: string, allergens?: any) {
-    return this.prisma.menuItem.create({
-      data: {
-        name,
-        allergens,
-        menuId,
-      },
+  async getByDate(dateStr: string) {
+    const date = new Date(dateStr);
+    const menu = await this.prisma.dailyMenu.findUnique({
+      where: { date },
+      include: { options: true },
     });
+    if (!menu) throw new NotFoundException('Menu not found for date');
+    return menu;
   }
 
-  getMenuByDate(date: string) {
-    return this.prisma.menu.findFirst({
-      where: {
-        date: new Date(date),
-      },
-      include: {
-        items: true,
-      },
+  async getById(id: string) {
+    const menu = await this.prisma.dailyMenu.findUnique({
+      where: { id },
+      include: { options: true },
     });
+    if (!menu) throw new NotFoundException('Menu not found');
+    return menu;
+  }
+
+  /**
+   * Endpoint intern folosit de orders-service:
+   * validează că:
+   * - dailyMenu există
+   * - dailyMenu.date == orderDate (aceeași zi)
+   * - fiecare optionId aparține meniului și categoriei cerute
+   */
+  async validateOrder(dto: ValidateOrderDto) {
+    const menu = await this.prisma.dailyMenu.findUnique({
+      where: { id: dto.dailyMenuId },
+      include: { options: true },
+    });
+    if (!menu) throw new NotFoundException('DailyMenu not found');
+
+    const orderDate = new Date(dto.orderDate);
+    // comparăm doar data (UTC vs local poate fi tricky; pentru proiect merge ok dacă folosești @db.Date)
+    const menuDateISO = menu.date.toISOString().slice(0, 10);
+    const orderDateISO = orderDate.toISOString().slice(0, 10);
+    if (menuDateISO !== orderDateISO) {
+      throw new BadRequestException('dailyMenuId does not match orderDate');
+    }
+
+    const optionsById = new Map(menu.options.map(o => [o.id, o]));
+    for (const sel of dto.selections) {
+      const opt = optionsById.get(sel.optionId);
+      if (!opt) throw new BadRequestException(`Option ${sel.optionId} not in this menu`);
+      if (opt.category !== sel.category) {
+        throw new BadRequestException(`Option ${sel.optionId} category mismatch`);
+      }
+    }
+
+    // poți întoarce și denumiri ca să fie ușor de raportat
+    return {
+      ok: true,
+      menuId: menu.id,
+      date: menuDateISO,
+      normalizedSelections: dto.selections.map(s => ({
+        category: s.category,
+        optionId: s.optionId,
+        optionName: optionsById.get(s.optionId)!.name,
+      })),
+    };
   }
 }

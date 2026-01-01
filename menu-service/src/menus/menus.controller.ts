@@ -1,29 +1,51 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { MenusService } from './menus.service';
+import { CreateDailyMenuDto } from './dto/create-daily-menu.dto';
+import { ValidateOrderDto } from './dto/validate-order.dto';
+import { KeycloakAuthGuard } from '../auth/keycloak-auth.guard';
+import { Roles } from '../auth/role.decorator';
+import { RolesGuard } from '../auth/role.guards';
 
 @Controller('menus')
 export class MenusController {
-  constructor(private readonly menusService: MenusService) {}
+  constructor(private readonly menus: MenusService) {}
 
-  @Post()
-  createMenu(
-    @Body('date') date: string,
-    @Body('title') title: string,
-  ) {
-    return this.menusService.createMenu(date, title);
+  // ADMIN: creează meniul zilei
+  @UseGuards(KeycloakAuthGuard, RolesGuard)
+  @Roles('admin')
+  @Post('daily')
+  async createDaily(@Body() dto: CreateDailyMenuDto) {
+    return this.menus.createDailyMenu(dto);
   }
 
-  @Post('item')
-  addItem(
-    @Body('menuId') menuId: string,
-    @Body('name') name: string,
-    @Body('allergens') allergens?: any,
-  ) {
-    return this.menusService.addItem(menuId, name, allergens);
+  // oricine autentificat poate vedea meniul zilei (sau poți lăsa public)
+  @UseGuards(KeycloakAuthGuard)
+  @Get('daily')
+  async getByDate(@Query('date') date: string) {
+    return this.menus.getByDate(date);
   }
 
-  @Get()
-  getMenu(@Query('date') date: string) {
-    return this.menusService.getMenuByDate(date);
+  @UseGuards(KeycloakAuthGuard)
+  @Get(':id')
+  async getById(@Param('id') id: string) {
+    return this.menus.getById(id);
+  }
+
+  // INTERNAL: folosit de orders-service
+  // opțiunea A (simplu): îl lași protejat cu token + rol "service"
+  // pentru milestone poți să-l protejezi cu admin/teacher (sau doar auth).
+  @UseGuards(KeycloakAuthGuard, RolesGuard)
+  @Roles('admin') // sau 'service' când faci client credentials
+  @Post('internal/validate-order')
+  async validateOrder(@Body() dto: ValidateOrderDto) {
+    return this.menus.validateOrder(dto);
   }
 }
