@@ -39,6 +39,7 @@ export class MenusService {
       });
     } catch (e: any) {
       // date unique constraint
+      console.log(e);
       throw new BadRequestException('DailyMenu already exists for this date');
     }
   }

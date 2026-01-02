@@ -1,5 +1,4 @@
 services:
-
   mysql:
     image: mysql:8
     container_name: school-mysql
@@ -13,11 +12,10 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
       interval: 5s
       timeout: 3s
       retries: 10
-
 
   keycloak-db:
     image: postgres:15
@@ -79,6 +77,26 @@ services:
       mysql:
         condition: service_healthy
       keycloak:
+        condition: service_started
+    networks:
+      - school-net
+
+  orders-service:
+    build:
+      context: ./orders-service
+    container_name: orders-service
+    env_file:
+      - ./orders-service/.env.docker
+    ports:
+      - "3002:3002"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+      user-service:
+        condition: service_started
+      menu-service:
         condition: service_started
     networks:
       - school-net

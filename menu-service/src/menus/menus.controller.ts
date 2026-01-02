@@ -39,11 +39,8 @@ export class MenusController {
     return this.menus.getById(id);
   }
 
-  // INTERNAL: folosit de orders-service
-  // opțiunea A (simplu): îl lași protejat cu token + rol "service"
-  // pentru milestone poți să-l protejezi cu admin/teacher (sau doar auth).
   @UseGuards(KeycloakAuthGuard, RolesGuard)
-  @Roles('admin') // sau 'service' când faci client credentials
+  @Roles('service')
   @Post('internal/validate-order')
   async validateOrder(@Body() dto: ValidateOrderDto) {
     return this.menus.validateOrder(dto);

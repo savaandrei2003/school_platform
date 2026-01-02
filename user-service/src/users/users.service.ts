@@ -37,21 +37,17 @@ export class UsersService {
         },
       });
 
-      // atașăm copiii din bază după email-ul părintelui
-      await this.prisma.child.updateMany({
-        where: {
-          parentEmail: email,
-          parentId: null,
-        },
-        data: {
-          parentId: sub,
-        },
-      });
 
       message = 'User created successfully';
     } else {
       message = 'User already exists';
     }
+
+    // 3. asociem copiii orfani (fără parentId) cu acest părinte, pe baza email-ului
+    await this.prisma.child.updateMany({
+      where: { parentEmail: email, parentId: null },
+      data: { parentId: sub },
+    });
 
     const children = await this.prisma.child.findMany({
       where: { parentId: sub },

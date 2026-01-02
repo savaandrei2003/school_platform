@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  CANCELED
+}
+
+model Order {
+  id          String      @id @default(uuid()) @db.Char(36)
+
+  parentSub   String      @db.Char(36)
+  parentEmail String
+
+  childId     String      @db.Char(36)
+
+  // ziua pentru care e comanda (important)
+  orderDate   DateTime
+
+  status      OrderStatus @default(PENDING)
+
+  // referințe logice către menu-service (nu FK)
+  menuDate    DateTime
+  menuId      String?     @db.Char(36)
+
+  placedAt    DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  canceledAt  DateTime?
+
+  selection   OrderSelection?
+
+  @@unique([childId, orderDate], map: "uniq_child_orderDate")
+  @@index([parentSub], map: "idx_parentSub")
+  @@index([orderDate], map: "idx_orderDate")
+}
+
+model OrderSelection {
+  id        String   @id @default(uuid()) @db.Char(36)
+  orderId   String   @unique @db.Char(36)
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  // ce a ales părintele
+  choices   Json
+
+  // snapshot opțional (info din meniul zilei)
+  snapshot  Json?
+
+  createdAt DateTime @default(now())
+}
