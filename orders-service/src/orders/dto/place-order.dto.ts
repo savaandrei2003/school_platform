@@ -1,20 +1,36 @@
-import { IsISO8601, IsObject, IsOptional, IsString, Length } from 'class-validator';
+import { IsArray, IsEnum, IsISO8601, IsString, Length, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export enum MenuCategory {
+  SOUP = 'SOUP',
+  MAIN = 'MAIN',
+  DESSERT = 'DESSERT',
+  RESERVE = 'RESERVE',
+}
+
+export class SelectionDto {
+  @IsEnum(MenuCategory)
+  category: MenuCategory;
+
+  @IsString()
+  @Length(36, 36)
+  optionId: string;
+}
 
 export class PlaceOrderDto {
   @IsString()
   @Length(36, 36)
   childId: string;
 
-  // ziua comenzii: "2026-01-04"
   @IsISO8601({ strict: true })
   orderDate: string;
 
-  // ce a ales părintele (json)
-  @IsObject()
-  choices: Record<string, any>;
+  @IsString()
+  @Length(36, 36)
+  dailyMenuId: string;
 
-  // dacă vrei să forțezi menuDate separat (de obicei = orderDate)
-  @IsOptional()
-  @IsISO8601({ strict: true })
-  menuDate?: string;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SelectionDto)
+  selections: SelectionDto[];
 }

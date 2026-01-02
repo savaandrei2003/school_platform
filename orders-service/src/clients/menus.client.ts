@@ -3,8 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import { ServiceTokenProvider } from '../auth/service-token.provider';
 
 type ValidateOrderRequest = {
-  date: string;
-  choices: any;
+  dailyMenuId: string;
+  orderDate: string;
+  selections: { category: string; optionId: string }[];
 };
 
 type ValidateOrderResponse = {
@@ -28,6 +29,8 @@ export class MenusClient {
   async validateOrder(dto: ValidateOrderRequest): Promise<ValidateOrderResponse> {
     const token = await this.serviceToken.getServiceToken(); // <--- AICI
 
+    // console.log('MenusClient.validateOrder called with token:', token);
+
     const res = await fetch(`${this.baseUrl}/menus/internal/validate-order`, {
       method: 'POST',
       headers: {
@@ -37,7 +40,12 @@ export class MenusClient {
       body: JSON.stringify(dto),
     });
 
+   
+    
+
     const data = (await res.json()) as ValidateOrderResponse;
+
+    console.log('MenusClient.validateOrder response:', data);
 
     if (!res.ok || !data.ok) {
       throw new BadRequestException({
