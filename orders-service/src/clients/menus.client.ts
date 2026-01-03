@@ -56,4 +56,27 @@ export class MenusClient {
 
     return data;
   }
+
+  async getDailyMenusRange(from: string, to: string): Promise<any[]> {
+    const token = await this.serviceToken.getServiceToken();
+
+    const url =
+      `${this.baseUrl}/menus/internal/range` +
+      `?from=${encodeURIComponent(from)}` +
+      `&to=${encodeURIComponent(to)}`;
+
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new BadRequestException(`Menus range failed: ${res.status} ${text}`);
+    }
+
+    return (await res.json()) as any[];
+  }
 }

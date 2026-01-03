@@ -45,4 +45,11 @@ export class MenusController {
   async validateOrder(@Body() dto: ValidateOrderDto) {
     return this.menus.validateOrder(dto);
   }
+
+  @UseGuards(KeycloakAuthGuard, RolesGuard)
+  @Roles('service')
+  @Get('internal/range')
+  async getRange(@Query('from') from: string, @Query('to') to: string) {
+    return this.menus.getRange(from, to);
+  }
 }

@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDailyMenuDto } from './dto/create-daily-menu.dto';
 import { ValidateOrderDto } from './dto/validate-order.dto';
@@ -14,11 +18,15 @@ export class MenusService {
     const defaultsByCategory = new Map<string, number>();
     for (const opt of dto.options) {
       if (opt.isDefault) {
-        defaultsByCategory.set(opt.category, (defaultsByCategory.get(opt.category) ?? 0) + 1);
+        defaultsByCategory.set(
+          opt.category,
+          (defaultsByCategory.get(opt.category) ?? 0) + 1,
+        );
       }
     }
     for (const [cat, cnt] of defaultsByCategory.entries()) {
-      if (cnt > 1) throw new BadRequestException(`Multiple defaults for category ${cat}`);
+      if (cnt > 1)
+        throw new BadRequestException(`Multiple defaults for category ${cat}`);
     }
 
     try {
@@ -27,7 +35,7 @@ export class MenusService {
           date,
           title: dto.title,
           options: {
-            create: dto.options.map(o => ({
+            create: dto.options.map((o) => ({
               category: o.category,
               name: o.name,
               allergens: o.allergens ?? undefined,
@@ -63,13 +71,7 @@ export class MenusService {
     return menu;
   }
 
-  /**
-   * Endpoint intern folosit de orders-service:
-   * validează că:
-   * - dailyMenu există
-   * - dailyMenu.date == orderDate (aceeași zi)
-   * - fiecare optionId aparține meniului și categoriei cerute
-   */
+
   async validateOrder(dto: ValidateOrderDto) {
     const menu = await this.prisma.dailyMenu.findUnique({
       where: { id: dto.dailyMenuId },
@@ -85,12 +87,17 @@ export class MenusService {
       throw new BadRequestException('dailyMenuId does not match orderDate');
     }
 
-    const optionsById = new Map(menu.options.map(o => [o.id, o]));
+    const optionsById = new Map(menu.options.map((o) => [o.id, o]));
     for (const sel of dto.selections) {
       const opt = optionsById.get(sel.optionId);
-      if (!opt) throw new BadRequestException(`Option ${sel.optionId} not in this menu`);
+      if (!opt)
+        throw new BadRequestException(
+          `Option ${sel.optionId} not in this menu`,
+        );
       if (opt.category !== sel.category) {
-        throw new BadRequestException(`Option ${sel.optionId} category mismatch`);
+        throw new BadRequestException(
+          `Option ${sel.optionId} category mismatch`,
+        );
       }
     }
 
@@ -99,11 +106,25 @@ export class MenusService {
       ok: true,
       menuId: menu.id,
       date: menuDateISO,
-      normalizedSelections: dto.selections.map(s => ({
+      normalizedSelections: dto.selections.map((s) => ({
         category: s.category,
         optionId: s.optionId,
         optionName: optionsById.get(s.optionId)!.name,
       })),
     };
+  }
+
+   async getRange(fromStr: string, toStr: string) {
+    const from = new Date(fromStr);
+    const to = new Date(toStr);
+
+    // include și ziua "to": setăm până la finalul zilei
+    to.setHours(23, 59, 59, 999);
+
+    return this.prisma.dailyMenu.findMany({
+      where: { date: { gte: from, lte: to } },
+      orderBy: { date: 'asc' },
+      include: { options: true },
+    });
   }
 }

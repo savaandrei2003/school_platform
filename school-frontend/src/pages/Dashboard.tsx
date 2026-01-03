@@ -44,7 +44,10 @@ export function Dashboard() {
         const ordRes = await apiGet<Order[]>(`${ordersBase}/orders`, token);
         setOrders(ordRes);
 
-        const todayRes = await apiGet<Order[]>(`${ordersBase}/orders/today`, token);
+        const todayRes = await apiGet<Order[]>(
+          `${ordersBase}/orders/today`,
+          token
+        );
         setTodayOrders(todayRes);
       } catch (e: any) {
         setErr(e?.message ?? "Failed to load");
@@ -85,9 +88,13 @@ export function Dashboard() {
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+      <div
+        style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}
+      >
         {/* 1) Comenzile mele */}
-        <div style={{ border: "1px solid #ddd", borderRadius: 12, padding: 16 }}>
+        <div
+          style={{ border: "1px solid #ddd", borderRadius: 12, padding: 16 }}
+        >
           <h3>Comenzile mele</h3>
           <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 8 }}>
             Copii: {me?.children?.length ?? 0}
@@ -100,7 +107,11 @@ export function Dashboard() {
               {ordersSorted.map((o) => (
                 <div
                   key={o.id}
-                  style={{ border: "1px solid #eee", borderRadius: 10, padding: 12 }}
+                  style={{
+                    border: "1px solid #eee",
+                    borderRadius: 10,
+                    padding: 12,
+                  }}
                 >
                   <div>
                     <b>{o.orderDate.slice(0, 10)}</b> — {o.status}
@@ -123,7 +134,9 @@ export function Dashboard() {
         </div>
 
         {/* 2) Plasează comandă */}
-        <div style={{ border: "1px solid #ddd", borderRadius: 12, padding: 16 }}>
+        <div
+          style={{ border: "1px solid #ddd", borderRadius: 12, padding: 16 }}
+        >
           <h3>Plasează comandă</h3>
 
           <label style={{ display: "block", marginBottom: 8 }}>
@@ -144,13 +157,19 @@ export function Dashboard() {
             <button style={{ marginLeft: 12 }}>Profil</button>
           </Link>
 
+          <Link to="/calendar">
+            <button style={{ marginLeft: 12 }}>Calendar</button>
+          </Link>
+
           <div style={{ marginTop: 12, fontSize: 12, opacity: 0.8 }}>
             Vei alege copil + opțiuni (SOUP/MAIN/DESSERT) pe pagina următoare.
           </div>
         </div>
 
         {/* 3) Mâncarea de azi */}
-        <div style={{ border: "1px solid #ddd", borderRadius: 12, padding: 16 }}>
+        <div
+          style={{ border: "1px solid #ddd", borderRadius: 12, padding: 16 }}
+        >
           <h3>Mâncarea de azi</h3>
           <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 10 }}>
             {todayISODate()}
@@ -170,7 +189,14 @@ export function Dashboard() {
                   snap.find((x) => x.category === cat)?.optionName ?? "—";
 
                 return (
-                  <div key={childId} style={{ border: "1px solid #eee", borderRadius: 10, padding: 12 }}>
+                  <div
+                    key={childId}
+                    style={{
+                      border: "1px solid #eee",
+                      borderRadius: 10,
+                      padding: 12,
+                    }}
+                  >
                     <div style={{ fontWeight: 800 }}>
                       {child?.name ?? "Copil"}{" "}
                       <span style={{ fontSize: 12, opacity: 0.7 }}>
@@ -179,12 +205,22 @@ export function Dashboard() {
                     </div>
 
                     {snap.length ? (
-                      <div style={{ marginTop: 8, fontSize: 13, lineHeight: 1.5 }}>
-                        <div><b>SOUP:</b> {pick("SOUP")}</div>
-                        <div><b>MAIN:</b> {pick("MAIN")}</div>
-                        <div><b>DESSERT:</b> {pick("DESSERT")}</div>
+                      <div
+                        style={{ marginTop: 8, fontSize: 13, lineHeight: 1.5 }}
+                      >
+                        <div>
+                          <b>SOUP:</b> {pick("SOUP")}
+                        </div>
+                        <div>
+                          <b>MAIN:</b> {pick("MAIN")}
+                        </div>
+                        <div>
+                          <b>DESSERT:</b> {pick("DESSERT")}
+                        </div>
                         {snap.some((x) => x.category === "RESERVE") ? (
-                          <div><b>RESERVE:</b> {pick("RESERVE")}</div>
+                          <div>
+                            <b>RESERVE:</b> {pick("RESERVE")}
+                          </div>
                         ) : null}
                       </div>
                     ) : (

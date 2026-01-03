@@ -3,6 +3,7 @@ import { OrdersService } from './orders.service';
 import { KeycloakAuthGuard } from '../auth/keycloak-auth.guard';
 import { PlaceOrderDto } from './dto/place-order.dto';
 import { ListOrdersQueryDto } from './dto/list-orders.query.dto';
+import { PlaceMonthDefaultsDto } from './dto/place-month-defaults.dto';
 
 @Controller('orders')
 export class OrdersController {
@@ -30,5 +31,11 @@ export class OrdersController {
   @Get('today')
   async today(@Req() req: any) {
     return this.orders.listToday(req.user.sub);
+  }
+
+  @UseGuards(KeycloakAuthGuard)
+  @Post('monthly-defaults')
+  async monthlyDefaults(@Req() req: any, @Body() dto: PlaceMonthDefaultsDto) {
+    return this.orders.placeMonthlyDefaults(req, dto);
   }
 }
