@@ -4,6 +4,7 @@ import { Login } from "./pages/Login";
 import { Dashboard } from "./pages/Dashboard";
 import { MenuForDate } from "./pages/MenuForDate";
 import type { JSX } from "react";
+import { Profile } from "./pages/Profile";
 
 function RequireAuth({ children }: { children: JSX.Element }) {
   const { ready, authenticated } = useAuth();
@@ -34,6 +35,8 @@ export default function App() {
               </RequireAuth>
             }
           />
+          <Route path="/profile" element={<Profile />} />
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
