@@ -36,3 +36,22 @@ export async function apiPatch<T>(url: string, token: string, body: any): Promis
 
   return (await res.json()) as T;
 }
+
+export async function apiDelete<T = any>(url: string, token: string): Promise<T> {
+  const res = await fetch(url, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  // unele endpoint-uri DELETE pot întoarce 204 No Content
+  if (res.status === 204) return {} as T;
+
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(txt || `DELETE failed: ${res.status}`);
+  }
+
+  return (await res.json()) as T;
+}

@@ -45,7 +45,7 @@ export class MenusClient {
 
     const data = (await res.json()) as ValidateOrderResponse;
 
-    console.log('MenusClient.validateOrder response:', data);
+    // console.log('MenusClient.validateOrder response:', data);
 
     if (!res.ok || !data.ok) {
       throw new BadRequestException({

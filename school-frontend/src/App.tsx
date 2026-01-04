@@ -6,12 +6,13 @@ import { MenuForDate } from "./pages/MenuForDate";
 import type { JSX } from "react";
 import { Profile } from "./pages/Profile";
 import { OrdersCalendar } from "./pages/OrdersCalendar";
+import { AppLayout } from "./components/layout/AppLayout";
 
 function RequireAuth({ children }: { children: JSX.Element }) {
   const { ready, authenticated } = useAuth();
   if (!ready) return <div style={{ padding: 24 }}>Loading…</div>;
   if (!authenticated) return <Navigate to="/login" replace />;
-  return children;
+  return <AppLayout>{children}</AppLayout>;
 }
 
 export default function App() {
@@ -20,6 +21,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+
           <Route
             path="/"
             element={
@@ -36,8 +38,22 @@ export default function App() {
               </RequireAuth>
             }
           />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/calendar" element={<OrdersCalendar />} />
+          <Route
+            path="/profile"
+            element={
+              <RequireAuth>
+                <Profile />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/calendar"
+            element={
+              <RequireAuth>
+                <OrdersCalendar />
+              </RequireAuth>
+            }
+          />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
