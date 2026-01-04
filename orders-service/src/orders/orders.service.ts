@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { Prisma, OrderStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -25,17 +26,53 @@ type MenuValidationResponse = {
 };
 
 @Injectable()
-export class OrdersService {
+export class OrdersService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly menusClient: MenusClient,
     private readonly usersClient: UsersClient,
   ) {}
 
+  /**
+   * Fallback safety:
+   * - dacă aplicația pornește după 09:00, confirmă comenzile PENDING de azi.
+   * - dacă cron-ul a fost ratat (restart/deploy), tot se repară.
+   */
+  async onModuleInit() {
+    await this.confirmTodayIfAfterCutoff();
+  }
+
   private extractBearer(req: any): string {
     const auth = req.headers?.authorization as string | undefined;
     if (!auth?.startsWith('Bearer ')) return '';
     return auth.substring('Bearer '.length);
+  }
+
+  /**
+   * Confirmă automat comenzile PENDING de AZI dacă e după 09:00.
+   * Rulează safe (idempotent).
+   */
+  private async confirmTodayIfAfterCutoff(now = new Date()) {
+    const cutoff = new Date(now);
+    cutoff.setHours(9, 0, 0, 0);
+
+    // înainte de 09:00 nu confirmăm
+    if (now < cutoff) return;
+
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(now);
+    end.setHours(23, 59, 59, 999);
+
+    await this.prisma.order.updateMany({
+      where: {
+        status: OrderStatus.PENDING,
+        orderDate: { gte: start, lte: end },
+      },
+      data: {
+        status: OrderStatus.CONFIRMED,      },
+    });
   }
 
   async placeOrder(req: any, dto: PlaceOrderDto) {
@@ -169,6 +206,9 @@ export class OrdersService {
   }
 
   async listForParent(parentSub: string, q: ListOrdersQueryDto) {
+    // fallback: dacă e după 09:00 și au rămas PENDING azi, le confirmăm
+    await this.confirmTodayIfAfterCutoff();
+
     const where: any = { parentSub };
 
     if (q.from || q.to) {
@@ -185,6 +225,9 @@ export class OrdersService {
   }
 
   async listToday(parentSub: string) {
+    // fallback: dacă e după 09:00 și au rămas PENDING azi, le confirmăm
+    await this.confirmTodayIfAfterCutoff();
+
     const now = new Date();
 
     const start = new Date(now);

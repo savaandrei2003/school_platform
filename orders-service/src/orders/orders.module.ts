@@ -4,9 +4,10 @@ import { OrdersService } from './orders.service';
 import { MenusClient } from '../clients/menus.client';
 import { UsersClient } from '../clients/users.client';
 import { ServiceTokenProvider } from 'src/auth/service-token.provider';
+import { OrdersScheduler } from './orders.scheduler';
 
 @Module({
   controllers: [OrdersController],
-  providers: [OrdersService, MenusClient, UsersClient, ServiceTokenProvider],
+  providers: [OrdersService, MenusClient, UsersClient, ServiceTokenProvider, OrdersScheduler],
 })
 export class OrdersModule {}
