@@ -1,5 +1,5 @@
 # ---------- BUILD ----------
-FROM node:18-bullseye AS builder
+FROM node:20-bullseye AS builder
 
 WORKDIR /app
 
@@ -10,10 +10,11 @@ COPY . .
 RUN npm run build
 
 # ---------- RUNTIME ----------
-FROM node:18-bullseye
+FROM node:20-bullseye
 
 WORKDIR /app
 
+# Copiem doar ce este necesar
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma

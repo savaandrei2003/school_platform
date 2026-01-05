@@ -5,7 +5,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div
       style={{
-        height: "100vh",
+        height: "98vh",
         display: "flex",
         flexDirection: "column",
         overflow: "hidden", // nu lăsa nimic să creeze scroll global

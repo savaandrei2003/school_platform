@@ -4,6 +4,7 @@ import { useAuth } from "../auth/AuthProvider";
 import { apiGet, apiDelete } from "../api/http";
 import { QuickOrderPanel } from "../components/orders/QuickOrderPanel";
 import { SelectedDayOrdersPanel } from "../components/orders/SelectedDayOrderPanel";
+// import { MyOrdersPanel } from "../components/orders/MyOrdersPanel";
 
 type Child = { id: string; name: string; class: string };
 type MeResponse = { user: any; children: Child[]; message?: string };
@@ -88,7 +89,8 @@ export function Dashboard() {
     if (!token) return;
     if (order.status !== "PENDING") return;
 
-    if (!confirm(`Sigur vrei să anulezi comanda din ${ymd(order.orderDate)}?`)) return;
+    if (!confirm(`Sigur vrei să anulezi comanda din ${ymd(order.orderDate)}?`))
+      return;
 
     try {
       setErr(null);
@@ -102,10 +104,11 @@ export function Dashboard() {
     }
   }
 
-  if (!authenticated) return <div style={{ padding: 24 }}>Please login first.</div>;
+  if (!authenticated)
+    return <div style={{ padding: 24 }}>Please login first.</div>;
 
   // layout: fără scroll pe pagină; scroll doar în panouri
-  const headerH = 56;
+
   const errH = err ? 56 : 0;
 
   return (
@@ -121,26 +124,6 @@ export function Dashboard() {
         gap: 12,
       }}
     >
-      {/* Header */}
-      <div
-        style={{
-          height: headerH,
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          flex: "0 0 auto",
-          minWidth: 0,
-        }}
-      >
-        <h2 style={{ margin: 0 }}>Dashboard</h2>
-        {loading ? <span style={{ fontSize: 12, opacity: 0.6 }}>Loading…</span> : null}
-
-        <div style={{ marginLeft: "auto", display: "flex", gap: 10, alignItems: "center" }}>
-          <button onClick={reload} style={{ padding: "8px 10px", borderRadius: 10 }}>
-            Refresh
-          </button>
-        </div>
-      </div>
 
       {err && (
         <div
@@ -157,8 +140,19 @@ export function Dashboard() {
             minWidth: 0,
           }}
         >
-          <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{err}</div>
-          <button onClick={() => setErr(null)} style={{ padding: "6px 10px", borderRadius: 10 }}>
+          <div
+            style={{
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {err}
+          </div>
+          <button
+            onClick={() => setErr(null)}
+            style={{ padding: "6px 10px", borderRadius: 10 }}
+          >
             OK
           </button>
         </div>
@@ -167,117 +161,24 @@ export function Dashboard() {
       {/* Grid */}
       <div
         style={{
-          flex: "1 1 auto",
-          minHeight: 0,
+          flex: "auto auto",
+          // minHeight: 0,
           overflow: "hidden",
           display: "grid",
-          gridTemplateColumns: "420px minmax(0, 1fr) 360px",
+          gridTemplateColumns: "1fr 1fr",
           gap: 16,
           alignItems: "stretch",
         }}
       >
-        {/* LEFT: Comenzile mele */}
-        <div
-          style={{
-            border: "1px solid #ddd",
-            borderRadius: 12,
-            background: "#fff",
-            overflow: "hidden",
-            display: "flex",
-            flexDirection: "column",
-            minWidth: 0,
-          }}
-        >
-          <div style={{ padding: 16, borderBottom: "1px solid #eee" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
-              <h3 style={{ margin: 0 }}>Comenzile mele</h3>
-              <div style={{ fontSize: 12, opacity: 0.7 }}>
-                Total: <b>{ordersSorted.length}</b>
-              </div>
-            </div>
-            <div style={{ marginTop: 6, fontSize: 12, opacity: 0.7 }}>
-              Click pe o comandă (sau pe zi în calendar) ca să vezi toate comenzile din ziua aia în dreapta.
-            </div>
-          </div>
+          {/* <MyOrdersPanel
+            orders={ordersSorted}
+            childMap={childMap}
+            selectedDay={selectedDay}
+            onSelectDay={setSelectedDay}
+            onCancelOrder={cancelOrder}
+            cancelingId={cancelingId}
+          /> */}
 
-          <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: 16, paddingRight: 12 }}>
-            {ordersSorted.length === 0 ? (
-              <div style={{ opacity: 0.7 }}>Nu ai comenzi încă.</div>
-            ) : (
-              <div style={{ display: "grid", gap: 10 }}>
-                {ordersSorted.map((o) => {
-                  const child = childMap.get(o.childId);
-                  const day = ymd(o.orderDate);
-                  const snap = o.selection?.snapshot ?? [];
-                  const pick = (cat: string) => snap.find((x) => x.category === cat)?.optionName ?? "—";
-                  const canCancel = o.status === "PENDING";
-                  const busy = cancelingId === o.id;
-                  const selected = day === selectedDay;
-
-                  return (
-                    <div
-                      key={o.id}
-                      onClick={() => setSelectedDay(day)}
-                      style={{
-                        border: selected ? "2px solid #111" : "1px solid #eee",
-                        borderRadius: 12,
-                        padding: 12,
-                        background: "#fff",
-                        cursor: "pointer",
-                      }}
-                      title="Click pentru detalii în dreapta"
-                    >
-                      <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontWeight: 900 }}>
-                            {child?.name ?? "Copil"}{" "}
-                            <span style={{ fontSize: 12, opacity: 0.7 }}>({child?.class ?? "?"})</span>
-                          </div>
-                          <div style={{ marginTop: 4, fontSize: 12, opacity: 0.85 }}>
-                            <b>{day}</b> • <b>{o.status}</b>
-                          </div>
-                        </div>
-
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            cancelOrder(o);
-                          }}
-                          disabled={!canCancel || busy}
-                          style={{
-                            padding: "8px 10px",
-                            borderRadius: 10,
-                            border: "1px solid #ddd",
-                            background: "#fff",
-                            cursor: canCancel && !busy ? "pointer" : "not-allowed",
-                            opacity: canCancel && !busy ? 1 : 0.5,
-                            height: 36,
-                            whiteSpace: "nowrap",
-                          }}
-                          title={!canCancel ? "Poți anula doar PENDING (înainte de cutoff)" : "Anulează"}
-                        >
-                          {busy ? "Canceling…" : "Cancel"}
-                        </button>
-                      </div>
-
-                      <div style={{ marginTop: 10, fontSize: 13, lineHeight: 1.55 }}>
-                        <div>
-                          <b>SOUP:</b> {pick("SOUP")}
-                        </div>
-                        <div>
-                          <b>MAIN:</b> {pick("MAIN")}
-                        </div>
-                        <div>
-                          <b>DESSERT:</b> {pick("DESSERT")}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
 
         {/* MIDDLE: Calendar + acțiuni (fără scroll pe pagină; scroll doar aici dacă e nevoie) */}
         <div style={{ minWidth: 0, minHeight: 0, overflow: "hidden" }}>
