@@ -3,10 +3,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import { apiGet, apiDelete } from "../api/http";
 
-import {
-  OrdersCalendarPanel,
-  type HighlightRange,
-} from "../components/orders/OrdersCalendarPanel";
+import { OrdersCalendarPanel, type HighlightRange } from "../components/orders/OrdersCalendarPanel";
 import { BulkDefaultsPanel } from "../components/orders/BulkDefaultsPanel";
 import { SelectedDayOrdersPanel } from "../components/orders/SelectedDayOrdersPanel";
 
@@ -42,7 +39,7 @@ export function Dashboard() {
   const [cancelingId, setCancelingId] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState(() => todayISODate());
 
-  // ✅ NEW: copil selectat (obligatoriu pt Continue/Update)
+  // ✅ SINGLE SOURCE OF TRUTH
   const [selectedChildId, setSelectedChildId] = useState<string>("");
 
   // preview range (din BulkDefaultsPanel)
@@ -60,7 +57,7 @@ export function Dashboard() {
       const ordRes = await apiGet<Order[]>(`${ordersBase}/orders`, token);
       setOrders(ordRes);
 
-      // ✅ auto-select copil dacă nu e setat încă
+      // ✅ auto select first child (only once / if missing)
       const firstChildId = meRes?.children?.[0]?.id ?? "";
       setSelectedChildId((prev) => prev || firstChildId);
     } catch (e: any) {
@@ -95,17 +92,13 @@ export function Dashboard() {
   }, [ordersSorted]);
 
   const selectedOrders = useMemo(() => {
-    // poți să NU filtrezi aici (panelul filtrează), dar e mai curat:
-    return (ordersByDay.get(selectedDay) ?? []).filter(
-      (o) => o.status !== "CANCELED"
-    );
+    return (ordersByDay.get(selectedDay) ?? []).filter((o) => o.status !== "CANCELED");
   }, [ordersByDay, selectedDay]);
 
   async function cancelOrder(order: Order) {
     if (!token) return;
     if (order.status !== "PENDING") return;
-    if (!confirm(`Sigur vrei să anulezi comanda din ${ymd(order.orderDate)}?`))
-      return;
+    if (!confirm(`Sigur vrei să anulezi comanda din ${ymd(order.orderDate)}?`)) return;
 
     try {
       setErr(null);
@@ -119,8 +112,7 @@ export function Dashboard() {
     }
   }
 
-  if (!authenticated)
-    return <div style={{ padding: 24 }}>Please login first.</div>;
+  if (!authenticated) return <div style={{ padding: 24 }}>Please login first.</div>;
 
   return (
     <div
@@ -149,25 +141,13 @@ export function Dashboard() {
             minWidth: 0,
           }}
         >
-          <div
-            style={{
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {err}
-          </div>
-          <button
-            onClick={() => setErr(null)}
-            style={{ padding: "6px 10px", borderRadius: 10 }}
-          >
+          <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{err}</div>
+          <button onClick={() => setErr(null)} style={{ padding: "6px 10px", borderRadius: 10 }}>
             OK
           </button>
         </div>
       )}
 
-      {/* 2 columns: LEFT calendar, RIGHT split */}
       <div
         style={{
           flex: "1 1 auto",
@@ -179,17 +159,13 @@ export function Dashboard() {
           alignItems: "stretch",
         }}
       >
-        {/* LEFT: calendar */}
+        {/* LEFT */}
         <div style={{ minWidth: 0, minHeight: 0, overflow: "hidden" }}>
           <OrdersCalendarPanel
             orders={ordersSorted}
             children={me?.children ?? []}
             selectedDay={selectedDay}
-            onSelectDay={(d) => {
-              setSelectedDay(d);
-              // dacă vrei să “decuplezi” preview range la click:
-              // setHighlight(null);
-            }}
+            onSelectDay={setSelectedDay}
             selectedChildId={selectedChildId}
             onSelectChildId={setSelectedChildId}
             highlight={highlight}
@@ -197,7 +173,7 @@ export function Dashboard() {
           />
         </div>
 
-        {/* RIGHT: split vertically */}
+        {/* RIGHT */}
         <div
           style={{
             minWidth: 0,
@@ -208,24 +184,24 @@ export function Dashboard() {
             gap: 16,
           }}
         >
-          {/* RIGHT TOP: bulk defaults builder */}
           <div style={{ minWidth: 0, minHeight: 0, overflow: "hidden" }}>
             <BulkDefaultsPanel
               token={token!}
               ordersBase={ordersBase}
               children={me?.children ?? []}
               selectedDay={selectedDay}
+              selectedChildId={selectedChildId}        // ✅ PROPAGATED
               onPreviewRange={setHighlight}
               onDone={reload}
             />
           </div>
 
-          {/* RIGHT BOTTOM: selected-day orders */}
           <div style={{ minWidth: 0, minHeight: 0, overflow: "hidden" }}>
             <SelectedDayOrdersPanel
               selectedDay={selectedDay}
               orders={selectedOrders}
               childMap={childMap}
+              selectedChildId={selectedChildId}        // ✅ PROPAGATED
               onCancelOrder={cancelOrder}
               cancelingId={cancelingId}
             />

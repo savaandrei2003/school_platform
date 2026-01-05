@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import type { Order } from "../../pages/Dashboard";
+import type { Order } from "../../../pages/Dashboard";
 
 type Child = { id: string; name: string; class: string };
 

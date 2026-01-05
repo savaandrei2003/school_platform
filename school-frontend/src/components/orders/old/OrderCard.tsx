@@ -1,4 +1,4 @@
-import { apiDelete } from "../../api/http";
+import { apiDelete } from "../../../api/http";
 
 type SnapshotItem = { category: string; optionId: string; optionName: string };
 

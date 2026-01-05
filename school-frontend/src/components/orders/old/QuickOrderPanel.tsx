@@ -1,8 +1,8 @@
 // src/components/orders/QuickOrderPanel.tsx
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiPost } from "../../api/http";
-import type { Order } from "../../pages/Dashboard";
+import { apiPost } from "../../../api/http";
+import type { Order } from "../../../pages/Dashboard";
 
 type Child = { id: string; name: string; class: string };
 

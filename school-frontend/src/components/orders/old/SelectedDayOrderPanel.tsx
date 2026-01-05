@@ -1,6 +1,6 @@
 // src/components/orders/SelectedDayOrdersPanel.tsx
 import React from "react";
-import type { Order } from "../../pages/Dashboard";
+import type { Order } from "../../../pages/Dashboard";
 
 type Child = { id: string; name: string; class: string };
 type SnapshotItem = { category: string; optionId: string; optionName: string };
