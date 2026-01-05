@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { apiGet, apiPost, apiDelete } from "../api/http";
 
@@ -54,14 +54,17 @@ export function MenuForDate() {
   const nav = useNavigate();
   const { token, authenticated } = useAuth();
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const childIdFromQuery = searchParams.get("childId") ?? "";
+
   const usersBase = import.meta.env.VITE_USERS_BASE;
   const menusBase = import.meta.env.VITE_MENUS_BASE;
   const ordersBase = import.meta.env.VITE_ORDERS_BASE;
 
   const [children, setChildren] = useState<Child[]>([]);
   const [childId, setChildId] = useState<string>("");
-  const [menu, setMenu] = useState<DailyMenu | null>(null);
 
+  const [menu, setMenu] = useState<DailyMenu | null>(null);
   const [picked, setPicked] = useState<Record<string, string>>({});
   const [existingOrder, setExistingOrder] = useState<Order | null>(null);
 
@@ -80,13 +83,22 @@ export function MenuForDate() {
         setOkMsg(null);
 
         const me = await apiGet<MeResponse>(`${usersBase}/users/me`, token);
-        setChildren(me.children ?? []);
-        if ((me.children ?? []).length > 0) setChildId(me.children[0].id);
+        const kids = me.children ?? [];
+        setChildren(kids);
 
-        const m = await apiGet<DailyMenu>(
-          `${menusBase}/menus/daily?date=${date}`,
-          token
-        );
+        const initial =
+          kids.some((c) => c.id === childIdFromQuery)
+            ? childIdFromQuery
+            : kids[0]?.id ?? "";
+
+        setChildId(initial);
+
+        // ensure URL reflects chosen child (optional, but nice)
+        if (initial && initial !== childIdFromQuery) {
+          setSearchParams({ childId: initial });
+        }
+
+        const m = await apiGet<DailyMenu>(`${menusBase}/menus/daily?date=${date}`, token);
         setMenu(m);
 
         // preselect defaults
@@ -101,7 +113,7 @@ export function MenuForDate() {
         setLoading(false);
       }
     })();
-  }, [authenticated, token, date, usersBase, menusBase]);
+  }, [authenticated, token, date, usersBase, menusBase, childIdFromQuery, setSearchParams]);
 
   // Group options by category for UI
   const grouped = useMemo(() => {
@@ -125,32 +137,21 @@ export function MenuForDate() {
       }));
   }, [menu, picked]);
 
-  // Load existing order for (childId, date) by calling /orders?from=..&to=..
+  // Load existing order for (childId, date)
   const loadExistingOrder = useCallback(async () => {
     if (!token || !date || !childId) return;
     try {
       setErr(null);
 
-      const ord = await apiGet<Order[]>(
-        `${ordersBase}/orders?from=${date}&to=${date}`,
-        token
-      );
+      const ord = await apiGet<Order[]>(`${ordersBase}/orders?from=${date}&to=${date}`, token);
 
-      const found = (ord ?? []).find(
-        (o) => ymd(o.orderDate) === date && o.childId === childId
-      );
-
+      const found = (ord ?? []).find((o) => ymd(o.orderDate) === date && o.childId === childId);
       setExistingOrder(found ?? null);
-
-      // dacă există comandă și are snapshot, poți auto-preselect din ea (opțional)
-      // Eu NU o fac automat ca să nu-ți suprascriu selecția userului.
-    } catch (e: any) {
-      // nu bloca UI-ul dacă asta eșuează
+    } catch {
       setExistingOrder(null);
     }
   }, [token, date, childId, ordersBase]);
 
-  // reîncarcă order-ul când se schimbă copilul sau data
   useEffect(() => {
     if (!authenticated || !token || !date || !childId) return;
     loadExistingOrder();
@@ -183,10 +184,6 @@ export function MenuForDate() {
 
       setOkMsg(existingOrder ? "Comanda a fost actualizată ✅" : "Comanda a fost plasată ✅");
       await loadExistingOrder();
-
-      // dacă vrei să rămână pe pagină: nu naviga
-      // dacă vrei să te întorci:
-      // setTimeout(() => nav("/"), 500);
     } catch (e: any) {
       setErr(e?.message ?? "Failed to place order");
     }
@@ -205,7 +202,6 @@ export function MenuForDate() {
       setOkMsg("Comanda a fost anulată ✅");
       await loadExistingOrder();
     } catch (e: any) {
-      // backend probabil refuză după 09:00 => afișăm mesajul
       setErr(e?.message ?? "Cancel failed");
     }
   }
@@ -232,9 +228,7 @@ export function MenuForDate() {
         </Link>
         <div>
           <div style={{ fontSize: 12, opacity: 0.7 }}>Meniu</div>
-          <div style={{ fontSize: 22, fontWeight: 900 }}>
-            {date}
-          </div>
+          <div style={{ fontSize: 22, fontWeight: 900 }}>{date}</div>
         </div>
 
         <div style={{ marginLeft: "auto", display: "flex", gap: 10, alignItems: "center" }}>
@@ -273,7 +267,11 @@ export function MenuForDate() {
                   Copil
                   <select
                     value={childId}
-                    onChange={(e) => setChildId(e.target.value)}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setChildId(v);
+                      setSearchParams({ childId: v }); // keep URL in sync
+                    }}
                     style={{
                       marginLeft: 8,
                       padding: "8px 10px",
@@ -331,13 +329,15 @@ export function MenuForDate() {
             <div style={card}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
                 <div style={{ fontWeight: 900 }}>Comanda (data asta)</div>
-                {existingOrder ? <span style={statusTone}>{existingOrder.status}</span> : <span style={pill("#f2f2f2")}>none</span>}
+                {existingOrder ? (
+                  <span style={statusTone}>{existingOrder.status}</span>
+                ) : (
+                  <span style={pill("#f2f2f2")}>none</span>
+                )}
               </div>
 
               <div style={{ marginTop: 10, fontSize: 12, opacity: 0.75 }}>
-                {existingOrder
-                  ? `orderId: ${existingOrder.id}`
-                  : "Nu există comandă încă pentru copilul selectat."}
+                {existingOrder ? `orderId: ${existingOrder.id}` : "Nu există comandă încă pentru copilul selectat."}
               </div>
 
               <div style={{ marginTop: 12, fontSize: 13, lineHeight: 1.6 }}>

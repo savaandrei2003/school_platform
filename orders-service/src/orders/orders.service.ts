@@ -11,7 +11,7 @@ import { MenusClient } from '../clients/menus.client';
 import { UsersClient } from '../clients/users.client';
 import { PlaceOrderDto } from './dto/place-order.dto';
 import { ListOrdersQueryDto } from './dto/list-orders.query.dto';
-import { isAfterCutoffForDate, parseISODateOnly } from '../common/time';
+import { isOrderLockedForDate, parseISODateOnly } from '../common/time';
 import { PlaceMonthDefaultsDto } from './dto/place-month-defaults.dto';
 
 type MenuValidationResponse = {
@@ -71,7 +71,8 @@ export class OrdersService implements OnModuleInit {
         orderDate: { gte: start, lte: end },
       },
       data: {
-        status: OrderStatus.CONFIRMED,      },
+        status: OrderStatus.CONFIRMED,
+      },
     });
   }
 
@@ -87,9 +88,9 @@ export class OrdersService implements OnModuleInit {
     const menuDate = orderDate;
 
     // 2) cutoff
-    if (isAfterCutoffForDate(orderDate)) {
+    if (isOrderLockedForDate(orderDate)) {
       throw new BadRequestException(
-        'Cutoff passed for today (09:00). Cannot place/update order.',
+        'Orders are locked for this date (past date or today after 09:00).',
       );
     }
 
@@ -190,9 +191,9 @@ export class OrdersService implements OnModuleInit {
       throw new ForbiddenException('Cannot cancel order not owned by you');
     }
 
-    if (isAfterCutoffForDate(order.orderDate)) {
+    if (isOrderLockedForDate(order.orderDate)) {
       throw new BadRequestException(
-        'Cutoff passed for today (09:00). Cannot cancel order.',
+        'Orders are locked for this date (past date or today after 09:00).',
       );
     }
 
@@ -288,8 +289,8 @@ export class OrdersService implements OnModuleInit {
       const menuDate = orderDate;
 
       // cutoff (dacă vrei “skip”, rămâne așa; dacă vrei fail fast, înlocuiești cu throw)
-      if (isAfterCutoffForDate(orderDate)) {
-        continue;
+      if (isOrderLockedForDate(orderDate)) {
+        continue; // sau throw dacă vrei fail-fast
       }
 
       const byCat = (cat: string) =>
