@@ -56,12 +56,12 @@ function mkPool(prefix: "REPLICA" | "META") {
     enableKeepAlive: true,
     timezone: "local",
     dateStrings: true, // Forțează driverul să citească datele ca string-uri, evitând conversia în obiecte Date de JS
-    typeCast: function (field, next) {
-      if (field.type === 'DATETIME') {
-        return field.string(); // Returnează data exact cum e în DB
-      }
-      return next();
-    }
+    // typeCast: function (field, next) {
+    //   if (field.type === 'DATETIME') {
+    //     return field.string(); // Returnează data exact cum e în DB
+    //   }
+    //   return next();
+    // }
   });
 }
 
@@ -330,34 +330,39 @@ app.get("/reports", async (req, res) => {
   const type = String(req.query.type || "");
   const from = String(req.query.from || "");
   const to = String(req.query.to || "");
-  const limit = Math.min(Number(req.query.limit || 50), 200);
+  const limit = parseInt(String(req.query.limit || "50"), 10);
 
-  const [rows] = await metaPool.execute<any[]>(
-    `
-    SELECT
-      id,
-      type,
-      DATE_FORMAT(report_date,'%Y-%m-%d') AS reportDate,
-      as_of AS asOf,
-      source,
-      status,
-      artifact_csv_path AS artifactCsvPath,
-      artifact_json_path AS artifactJsonPath,
-      checksum_sha256 AS checksumSha256,
-      error_message AS errorMessage,
-      created_at AS createdAt,
-      updated_at AS updatedAt
-    FROM reports
-    WHERE (?='' OR type=?)
-      AND (?='' OR report_date >= ?)
-      AND (?='' OR report_date <= ?)
-    ORDER BY report_date DESC, created_at DESC
-    LIMIT ?
-    `,
-    [type, type, from, from, to, to, limit]
-  );
+  try {
+    const [rows] = await metaPool.query<any[]>(
+      `
+      SELECT
+        id,
+        type,
+        DATE_FORMAT(report_date,'%Y-%m-%d') AS reportDate,
+        as_of AS asOf,
+        source,
+        status,
+        artifact_csv_path AS artifactCsvPath,
+        artifact_json_path AS artifactJsonPath,
+        checksum_sha256 AS checksumSha256,
+        error_message AS errorMessage,
+        created_at AS createdAt,
+        updated_at AS updatedAt
+      FROM reports
+      WHERE (? = '' OR type = ?)
+        AND (? = '' OR report_date >= NULLIF(?, ''))
+        AND (? = '' OR report_date <= NULLIF(?, ''))
+      ORDER BY report_date DESC, created_at DESC
+      LIMIT ?
+      `,
+      [type, type, from, from, to, to, limit]
+    );
 
-  res.json(rows);
+    res.json(rows);
+  } catch (error: any) {
+    console.error("Error fetching reports:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // get report
