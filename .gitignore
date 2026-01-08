@@ -1,1 +1,3 @@
 /mysql-data
+/mysql_replica_data
+/backup_schooldb.sql
