@@ -54,7 +54,14 @@ function mkPool(prefix: "REPLICA" | "META") {
     waitForConnections: true,
     connectionLimit: prefix === "REPLICA" ? 10 : 5,
     enableKeepAlive: true,
-    timezone: "Z",
+    timezone: "local",
+    dateStrings: true, // Forțează driverul să citească datele ca string-uri, evitând conversia în obiecte Date de JS
+    typeCast: function (field, next) {
+      if (field.type === 'DATETIME') {
+        return field.string(); // Returnează data exact cum e în DB
+      }
+      return next();
+    }
   });
 }
 
@@ -218,7 +225,7 @@ async function generateDaily(reportDate: string): Promise<{ rows: DailyRow[]; su
 
     const summary = {
       date: reportDate,
-      asOf: new Date().toISOString(),
+      asOf: new Date().toLocaleString('sv-SE').replace(' ', 'T'),
       totalOrders: out.length,
       byStatus,
       countsByCategory,

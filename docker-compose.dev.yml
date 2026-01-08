@@ -3,6 +3,7 @@ services:
     image: mysql:8
     container_name: school-mysql
     environment:
+      TZ: Europe/Bucharest
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: schooldb
     ports:
@@ -23,6 +24,7 @@ services:
     image: mysql:8
     container_name: school-mysql-replica
     environment:
+      TZ: Europe/Bucharest
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: schooldb
     ports:
