@@ -13,6 +13,7 @@ import { PlaceOrderDto } from './dto/place-order.dto';
 import { ListOrdersQueryDto } from './dto/list-orders.query.dto';
 import { isOrderLockedForDate, parseISODateOnly } from '../common/time';
 import { PlaceMonthDefaultsDto } from './dto/place-month-defaults.dto';
+import { OrdersEventsPublisher } from 'src/events/orders-events.publisher';
 
 type MenuValidationResponse = {
   ok: boolean;
@@ -31,6 +32,7 @@ export class OrdersService implements OnModuleInit {
     private readonly prisma: PrismaService,
     private readonly menusClient: MenusClient,
     private readonly usersClient: UsersClient,
+    private readonly publisher: OrdersEventsPublisher,
   ) {}
 
   /**
@@ -52,28 +54,71 @@ export class OrdersService implements OnModuleInit {
    * Confirmă automat comenzile PENDING de AZI dacă e după 09:00.
    * Rulează safe (idempotent).
    */
-  private async confirmTodayIfAfterCutoff(now = new Date()) {
-    const cutoff = new Date(now);
-    cutoff.setHours(9, 0, 0, 0);
+  // private async confirmTodayIfAfterCutoff(now = new Date()) {
+  //   const cutoff = new Date(now);
+  //   cutoff.setHours(9, 0, 0, 0);
 
-    // înainte de 09:00 nu confirmăm
-    if (now < cutoff) return;
+  //   // înainte de 09:00 nu confirmăm
+  //   if (now < cutoff) return;
 
-    const start = new Date(now);
-    start.setHours(0, 0, 0, 0);
+  //   const start = new Date(now);
+  //   start.setHours(0, 0, 0, 0);
 
-    const end = new Date(now);
-    end.setHours(23, 59, 59, 999);
+  //   const end = new Date(now);
+  //   end.setHours(23, 59, 59, 999);
 
-    await this.prisma.order.updateMany({
-      where: {
-        status: OrderStatus.PENDING,
-        orderDate: { gte: start, lte: end },
-      },
-      data: {
-        status: OrderStatus.CONFIRMED,
-      },
-    });
+  //   await this.prisma.order.updateMany({
+  //     where: {
+  //       status: OrderStatus.PENDING,
+  //       orderDate: { gte: start, lte: end },
+  //     },
+  //     data: {
+  //       status: OrderStatus.CONFIRMED,
+  //     },
+  //   });
+  // }
+
+  public async confirmTodayIfAfterCutoff() {
+
+    // 1) ia PENDING de azi direct din DB (în timezone-ul DB)
+    const pending = await this.prisma.$queryRaw<any[]>`
+    SELECT o.id, o.childId, o.parentSub, o.parentEmail, o.orderDate, os.snapshot
+    FROM \`Order\` o
+    LEFT JOIN OrderSelection os ON os.orderId = o.id
+    WHERE o.status = 'PENDING'
+      AND DATE(o.orderDate) = CURDATE()
+  `;
+
+
+    if (pending.length === 0) return;
+
+    // 2) confirmă
+    await this.prisma.$executeRaw`
+    UPDATE \`Order\`
+    SET status = 'CONFIRMED'
+    WHERE status = 'PENDING'
+      AND DATE(orderDate) = CURDATE()
+  `;
+
+    // 3) publish events
+    for (const o of pending) {
+      const snap = (o.snapshot as any[]) || [];
+      const pick = (cat: string) =>
+        snap.find((x: any) => x.category === cat)?.optionName || '';
+
+      await this.publisher.publishOrderConfirmed({
+        orderId: o.id,
+        orderDate: String(o.orderDate).slice(0, 10),
+        child: { id: o.childId, name: '', class: '' },
+        parent: { sub: o.parentSub, email: o.parentEmail },
+        menu: {
+          soup: pick('SOUP'),
+          main: pick('MAIN'),
+          dessert: pick('DESSERT'),
+          reserve: pick('RESERVE'),
+        },
+      });
+    }
   }
 
   async placeOrder(req: any, dto: PlaceOrderDto) {

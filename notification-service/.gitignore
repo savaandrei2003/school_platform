@@ -39,4 +39,3 @@ lerna-debug.log*
 
 uploads/**/*
 /generated/prisma
-/artifacts

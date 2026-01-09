@@ -124,6 +124,8 @@ services:
         condition: service_started
       menu-service:
         condition: service_started
+      rabbitmq:
+        condition: service_healthy
     networks:
       - school-net
 
@@ -145,6 +147,50 @@ services:
     volumes:
       - ./reporting-service/artifacts:/app/artifacts
       - ./reporting-service/migrations:/app/migrations:ro
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - school-net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: mailpit
+    ports:
+      - "8025:8025"   # UI
+      - "1025:1025"   # SMTP
+    networks:
+      - school-net
+
+  notification-service:
+    build:
+      context: ./notification-service
+    container_name: notification-service
+    env_file:
+      - ./notification-service/.env.docker
+    ports:
+      - "3004:3004"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+      mysql:
+        condition: service_healthy
+    networks:
+      - school-net
 
 networks:
   school-net:
