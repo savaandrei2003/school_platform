@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 
-
 export type OrderConfirmedEvent = {
   eventId: string;
   occurredAt: string;
@@ -35,8 +34,7 @@ export class EmailService {
     const subject = `Comandă confirmată – ${evt.data.child.name} – ${evt.data.orderDate}`;
 
     const m = evt.data.menu || {};
-    const text =
-`Comanda a fost confirmată.
+    const text = `Comanda a fost confirmată.
 
 Copil: ${evt.data.child.name} (${evt.data.child.class})
 Data: ${evt.data.orderDate}

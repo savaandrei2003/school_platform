@@ -32,12 +32,33 @@ export function isSameDayUTC(a: Date, b: Date): boolean {
  * - azi după 09:00 -> LOCK
  * - viitor -> OK
  */
+
+function getCutoffHM() {
+  const raw = process.env.ORDER_CUTOFF_TIME ?? '09:00:00';
+  const [h, m] = raw.split(':').map(Number);
+  return { h: h ?? 9, m: m ?? 0 };
+}
+
+
+// export function isOrderLockedForDate(targetDate: Date, now = new Date()): boolean {
+//   if (isPastDateUTC(targetDate, now)) return true;
+
+//   if (isSameDayUTC(targetDate, now)) {
+//     const cutoff = new Date(now);
+//     cutoff.setHours(9, 0, 0, 0);
+//     return now.getTime() > cutoff.getTime();
+//   }
+
+//   return false;
+// }
+
 export function isOrderLockedForDate(targetDate: Date, now = new Date()): boolean {
   if (isPastDateUTC(targetDate, now)) return true;
 
   if (isSameDayUTC(targetDate, now)) {
+    const { h, m } = getCutoffHM();
     const cutoff = new Date(now);
-    cutoff.setHours(9, 0, 0, 0);
+    cutoff.setHours(h, m, 0, 0);
     return now.getTime() > cutoff.getTime();
   }
 

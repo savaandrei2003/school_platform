@@ -80,6 +80,9 @@ export class OrdersService implements OnModuleInit {
 
   public async confirmTodayIfAfterCutoff() {
 
+    const cutoff = process.env.ORDER_CONFIRMATION ?? '09:00:00';
+
+
     // 1) ia PENDING de azi direct din DB (în timezone-ul DB)
     const pending = await this.prisma.$queryRaw<any[]>`
     SELECT o.id, o.childId, o.parentSub, o.parentEmail, o.orderDate, os.snapshot
@@ -87,6 +90,7 @@ export class OrdersService implements OnModuleInit {
     LEFT JOIN OrderSelection os ON os.orderId = o.id
     WHERE o.status = 'PENDING'
       AND DATE(o.orderDate) = CURDATE()
+      AND CURRENT_TIME() > ${cutoff}
   `;
 
 
@@ -98,6 +102,7 @@ export class OrdersService implements OnModuleInit {
     SET status = 'CONFIRMED'
     WHERE status = 'PENDING'
       AND DATE(orderDate) = CURDATE()
+      AND CURRENT_TIME() > ${cutoff}
   `;
 
     // 3) publish events

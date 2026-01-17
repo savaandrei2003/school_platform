@@ -111,6 +111,8 @@ services:
     build:
       context: ./orders-service
     container_name: orders-service
+    environment:
+      TZ: Europe/Bucharest
     env_file:
       - ./orders-service/.env.docker
     ports:
@@ -178,6 +180,8 @@ services:
     build:
       context: ./notification-service
     container_name: notification-service
+    environment:
+      TZ: Europe/Bucharest
     env_file:
       - ./notification-service/.env.docker
     ports:
