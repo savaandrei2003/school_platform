@@ -16,7 +16,7 @@ import { AppController } from './app.controller';
           type: 'topic',
         },
       ],
-      connectionInitOptions: { wait: true },
+      connectionInitOptions: { wait: true, timeout: 30000 },
     }),
   ],
   controllers: [AppController],

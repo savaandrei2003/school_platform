@@ -1,4 +1,7 @@
 services:
+  # =========================
+  # DATABASES
+  # =========================
   mysql:
     image: mysql:8
     container_name: school-mysql
@@ -7,9 +10,9 @@ services:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: schooldb
     ports:
-      - "3307:3306"
+      - "3307:3306"  # dev only
     networks:
-      - school-net
+      - db-net
     volumes:
       - mysql_data:/var/lib/mysql
       - ./mysql/primary.cnf:/etc/mysql/conf.d/primary.cnf:ro
@@ -28,9 +31,9 @@ services:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: schooldb
     ports:
-      - "3308:3306"
+      - "3308:3306"  # dev only
     networks:
-      - school-net
+      - db-net
     depends_on:
       mysql:
         condition: service_healthy
@@ -51,12 +54,15 @@ services:
       POSTGRES_USER: keycloak
       POSTGRES_PASSWORD: keycloak
     ports:
-      - "5433:5432"
+      - "5433:5432"  # dev only
     networks:
-      - school-net
+      - db-net
     volumes:
       - keycloak_data:/var/lib/postgresql/data
 
+  # =========================
+  # AUTH
+  # =========================
   keycloak:
     image: quay.io/keycloak/keycloak:24.0.1
     container_name: keycloak
@@ -73,8 +79,46 @@ services:
     depends_on:
       - keycloak-db
     networks:
-      - school-net
+      - edge-net
+      - db-net
 
+  # =========================
+  # MESSAGE BROKER
+  # =========================
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"    # dev only
+      - "15672:15672"  # UI dev only
+    networks:
+      - mq-net
+      - edge-net       # only for management UI in dev
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # =========================
+  # SMTP CAPTURE (DEV)
+  # =========================
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: mailpit
+    ports:
+      - "8025:8025"   # UI
+      - "1025:1025"   # SMTP
+    networks:
+      - smtp-net
+      - edge-net      # UI in dev
+
+  # =========================
+  # APP SERVICES
+  # =========================
   user-service:
     build:
       context: ./user-service
@@ -89,7 +133,8 @@ services:
       keycloak:
         condition: service_started
     networks:
-      - school-net
+      - edge-net
+      - db-net
 
   menu-service:
     build:
@@ -105,7 +150,8 @@ services:
       keycloak:
         condition: service_started
     networks:
-      - school-net
+      - edge-net
+      - db-net
 
   orders-service:
     build:
@@ -129,7 +175,9 @@ services:
       rabbitmq:
         condition: service_healthy
     networks:
-      - school-net
+      - edge-net
+      - db-net
+      - mq-net
 
   reporting-service:
     build:
@@ -145,36 +193,11 @@ services:
       mysql-replica:
         condition: service_healthy
     networks:
-      - school-net
+      - edge-net
+      - db-net
     volumes:
       - ./reporting-service/artifacts:/app/artifacts
       - ./reporting-service/migrations:/app/migrations:ro
-
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
-    networks:
-      - school-net
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  mailpit:
-    image: axllent/mailpit:latest
-    container_name: mailpit
-    ports:
-      - "8025:8025"   # UI
-      - "1025:1025"   # SMTP
-    networks:
-      - school-net
 
   notification-service:
     build:
@@ -194,10 +217,19 @@ services:
       mysql:
         condition: service_healthy
     networks:
-      - school-net
+      - edge-net
+      - mq-net
+      - smtp-net
+      - db-net   # doar dacă notification citește/scrie în DB (altfel o scoți)
 
 networks:
-  school-net:
+  edge-net:
+    driver: bridge
+  db-net:
+    driver: bridge
+  mq-net:
+    driver: bridge
+  smtp-net:
     driver: bridge
 
 volumes:

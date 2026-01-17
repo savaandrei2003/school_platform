@@ -9,7 +9,7 @@ import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
       exchanges: [
         { name: process.env.RABBITMQ_EXCHANGE || 'school.events', type: 'topic' },
       ],
-      connectionInitOptions: { wait: true },
+      connectionInitOptions: { wait: true, timeout: 30000 },
     }),
   ],
   exports: [RabbitMQModule],
