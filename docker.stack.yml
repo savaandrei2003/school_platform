@@ -1,26 +1,65 @@
-version: "3.9"
-
 services:
   mysql:
     image: mysql:8
+    # hostname scos: in Swarm/DNS te bazezi pe numele serviciului "mysql"
     environment:
+      TZ: Europe/Bucharest
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: schooldb
-    ports:
-      - "3307:3306"
+      MYSQL_ROOT_HOST: "%"
+    networks:
+      - db-net
     volumes:
       - mysql_data:/var/lib/mysql
-    networks:
-      - school-net
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      - type: bind
+        source: ./mysql/primary.cnf
+        target: /etc/mysql/conf.d/primary.cnf
+        read_only: true
+      - type: bind
+        source: ./mysql/init
+        target: /docker-entrypoint-initdb.d
+        read_only: true
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
+
+  mysql-replica:
+    image: mysql:8
+    # ruleaza bootstrap-ul ca wrapper (scriptul tau porneste mysqld prin docker-entrypoint.sh)
+    command: ["sh", "/replica-entrypoint.sh"]
+    environment:
+      TZ: Europe/Bucharest
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: schooldb
+      MYSQL_ROOT_HOST: "%"
+    networks:
+      - db-net
+    volumes:
+      - mysql_replica_data:/var/lib/mysql
+      - type: bind
+        source: ./mysql/replica.cnf
+        target: /etc/mysql/conf.d/replica.cnf
+        read_only: true
+      - type: bind
+        source: ./mysql/replica-bootstrap/replica-entrypoint.sh
+        target: /replica-entrypoint.sh
+        read_only: true
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.labels.db == true
+
+  db-migrate:
+    image: savaandrei2003/db-migrator:1.0.3
+    environment:
+      DATABASE_URL: mysql://root:root@mysql:3306/schooldb
+    networks: [db-net]
+    deploy:
+      replicas: 0
 
   keycloak-db:
     image: postgres:15
@@ -28,20 +67,21 @@ services:
       POSTGRES_DB: keycloak
       POSTGRES_USER: keycloak
       POSTGRES_PASSWORD: keycloak
-    ports:
-      - "5433:5432"
+    networks:
+      - db-net
     volumes:
       - keycloak_data:/var/lib/postgresql/data
-    networks:
-      - school-net
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
+      placement:
+        constraints:
+          - node.labels.db == true
 
   keycloak:
     image: quay.io/keycloak/keycloak:24.0.1
-    command: ["start-dev"]
+    command: start-dev
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
@@ -49,45 +89,217 @@ services:
       KC_DB_PASSWORD: keycloak
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
-    ports:
-      - "8080:8080"
     networks:
-      - school-net
+      - edge-net
+      - db-net
+    ports:
+      - target: 8080
+        published: 8080
+        protocol: tcp
+        mode: ingress
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - mq-net
+      - edge-net
+    ports:
+      - target: 5672
+        published: 5672
+        protocol: tcp
+        mode: ingress
+      - target: 15672
+        published: 15672
+        protocol: tcp
+        mode: ingress
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  mailpit:
+    image: axllent/mailpit:latest
+    networks:
+      - smtp-net
+      - edge-net
+    ports:
+      - target: 8025
+        published: 8025
+        protocol: tcp
+        mode: ingress
+      - target: 1025
+        published: 1025
+        protocol: tcp
+        mode: ingress
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
 
   user-service:
-    image: school_platform-user-service:latest
+    image: savaandrei2003/user-service:1.0.3
     env_file:
       - ./user-service/.env.docker
-    ports:
-      - "3000:3000"
     networks:
-      - school-net
+      - edge-net
+      - db-net
+    ports:
+      - target: 3000
+        published: 3000
+        protocol: tcp
+        mode: ingress
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
 
   menu-service:
-    image: school_platform-menu-service:latest
+    image: savaandrei2003/menu-service:1.0.3
     env_file:
       - ./menu-service/.env.docker
-    ports:
-      - "3001:3001"
     networks:
-      - school-net
+      - edge-net
+      - db-net
+    ports:
+      - target: 3001
+        published: 3001
+        protocol: tcp
+        mode: ingress
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
 
+  orders-service:
+    image: savaandrei2003/orders-service:1.0.3
+    environment:
+      TZ: Europe/Bucharest
+    env_file:
+      - ./orders-service/.env.docker
+    networks:
+      - edge-net
+      - db-net
+      - mq-net
+    ports:
+      - target: 3002
+        published: 3002
+        protocol: tcp
+        mode: ingress
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  reporting-service:
+    image: savaandrei2003/reporting-service:1.0.3
+    environment:
+      TZ: Europe/Bucharest
+      TIMEZONE: Europe/Bucharest
+    env_file:
+      - ./reporting-service/.env.docker
+    networks:
+      - edge-net
+      - db-net
+    ports:
+      - target: 3003
+        published: 3003
+        protocol: tcp
+        mode: ingress
+    volumes:
+      - type: bind
+        source: ./reporting-service/migrations
+        target: /app/migrations
+        read_only: true
+      - type: bind
+        source: ./reporting-service/artifacts
+        target: /app/artifacts
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  notification-service:
+    image: savaandrei2003/notification-service:1.0.3
+    environment:
+      TZ: Europe/Bucharest
+    env_file:
+      - ./notification-service/.env.docker
+    networks:
+      - edge-net
+      - mq-net
+      - smtp-net
+      - db-net
+    ports:
+      - target: 3004
+        published: 3004
+        protocol: tcp
+        mode: ingress
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  frontend:
+    image: savaandrei2003/school-frontend:1.0.0
+    networks:
+      - edge-net
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    
+  gateway:
+    image: nginx:alpine
+    networks:
+      - edge-net
+      - db-net
+      - mq-net
+      - smtp-net
+    ports:
+      - target: 80
+        published: 80
+        protocol: tcp
+        mode: ingress
+    volumes:
+      - type: bind
+        source: ./gateway/nginx.conf
+        target: /etc/nginx/conf.d/default.conf
+        read_only: true
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  
+
 networks:
-  school-net:
+  edge-net:
     driver: overlay
+    attachable: true
+  db-net:
+    driver: overlay
+    attachable: true
+  mq-net:
+    driver: overlay
+    attachable: true
+  smtp-net:
+    driver: overlay
+    attachable: true
 
 volumes:
   mysql_data:
+    external: true
+    name: school_platform_mysql_data
+  mysql_replica_data:
+    external: true
+    name: school_platform_mysql_replica_data
   keycloak_data:
+    external: true
+    name: school_platform_keycloak_data
