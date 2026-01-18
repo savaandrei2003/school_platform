@@ -1,0 +1,14 @@
+﻿version: "3.8"
+services:
+  db-migrate:
+    image: savaandrei2003/db-migrator:1.0.3
+  user-service:
+    image: savaandrei2003/user-service:1.0.3
+  menu-service:
+    image: savaandrei2003/menu-service:1.0.3
+  orders-service:
+    image: savaandrei2003/orders-service:1.0.3
+  reporting-service:
+    image: savaandrei2003/reporting-service:1.0.3
+  notification-service:
+    image: savaandrei2003/notification-service:1.0.3

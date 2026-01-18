@@ -1,18 +1,14 @@
 {
-  "name": "db",
+  "name": "db-migrator",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "prisma": "^5.12.0"
+    "migrate:deploy": "prisma migrate deploy",
+    "db:push": "prisma db push",
+    "generate": "prisma generate"
   },
   "dependencies": {
-    "@prisma/client": "^5.12.0"
+    "@prisma/client": "^5.12.0",
+    "prisma": "^5.12.0"
   }
 }

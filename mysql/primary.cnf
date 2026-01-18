@@ -7,3 +7,5 @@ enforce_gtid_consistency=ON
 
 # optional, dar ok:
 binlog_row_image=FULL
+
+skip_name_resolve=ON

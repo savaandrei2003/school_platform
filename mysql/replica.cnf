@@ -5,6 +5,12 @@ super_read_only=ON
 
 gtid_mode=ON
 enforce_gtid_consistency=ON
+
 relay_log=relay-bin
+relay_log_recovery=ON
+log_replica_updates=ON
+
 log_bin=mysql-bin
 binlog_format=ROW
+
+skip_name_resolve=ON

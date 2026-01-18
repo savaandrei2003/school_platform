@@ -1,7 +1,6 @@
 services:
   mysql:
     image: mysql:8
-    # hostname scos: in Swarm/DNS te bazezi pe numele serviciului "mysql"
     environment:
       TZ: Europe/Bucharest
       MYSQL_ROOT_PASSWORD: root
@@ -23,10 +22,12 @@ services:
       replicas: 1
       restart_policy:
         condition: on-failure
+      placement:
+        constraints:
+          - node.labels.db == true
 
   mysql-replica:
     image: mysql:8
-    # ruleaza bootstrap-ul ca wrapper (scriptul tau porneste mysqld prin docker-entrypoint.sh)
     command: ["sh", "/replica-entrypoint.sh"]
     environment:
       TZ: Europe/Bucharest
@@ -57,7 +58,8 @@ services:
     image: savaandrei2003/db-migrator:1.0.3
     environment:
       DATABASE_URL: mysql://root:root@mysql:3306/schooldb
-    networks: [db-net]
+    networks:
+      - db-net
     deploy:
       replicas: 0
 
@@ -87,16 +89,18 @@ services:
       KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
       KC_DB_USERNAME: keycloak
       KC_DB_PASSWORD: keycloak
+
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
+
+      # IMPORTANT pentru reverse proxy pe /auth
+      KC_PROXY: edge
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_STRICT_HTTPS: "false"
     networks:
       - edge-net
       - db-net
-    ports:
-      - target: 8080
-        published: 8080
-        protocol: tcp
-        mode: ingress
     deploy:
       replicas: 1
       restart_policy:
@@ -110,6 +114,7 @@ services:
     networks:
       - mq-net
       - edge-net
+    # daca vrei UI public, lasa ports. daca nu, scoate-le.
     ports:
       - target: 5672
         published: 5672
@@ -129,6 +134,7 @@ services:
     networks:
       - smtp-net
       - edge-net
+    # daca vrei UI public, lasa ports. daca nu, scoate-le.
     ports:
       - target: 8025
         published: 8025
@@ -150,11 +156,6 @@ services:
     networks:
       - edge-net
       - db-net
-    ports:
-      - target: 3000
-        published: 3000
-        protocol: tcp
-        mode: ingress
     deploy:
       replicas: 1
       restart_policy:
@@ -167,11 +168,6 @@ services:
     networks:
       - edge-net
       - db-net
-    ports:
-      - target: 3001
-        published: 3001
-        protocol: tcp
-        mode: ingress
     deploy:
       replicas: 1
       restart_policy:
@@ -187,11 +183,6 @@ services:
       - edge-net
       - db-net
       - mq-net
-    ports:
-      - target: 3002
-        published: 3002
-        protocol: tcp
-        mode: ingress
     deploy:
       replicas: 1
       restart_policy:
@@ -207,11 +198,6 @@ services:
     networks:
       - edge-net
       - db-net
-    ports:
-      - target: 3003
-        published: 3003
-        protocol: tcp
-        mode: ingress
     volumes:
       - type: bind
         source: ./reporting-service/migrations
@@ -236,25 +222,20 @@ services:
       - mq-net
       - smtp-net
       - db-net
-    ports:
-      - target: 3004
-        published: 3004
-        protocol: tcp
-        mode: ingress
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
 
   frontend:
-    image: savaandrei2003/school-frontend:1.0.0
+    image: savaandrei2003/school-frontend:1.0.13
     networks:
       - edge-net
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
-    
+
   gateway:
     image: nginx:alpine
     networks:
@@ -276,8 +257,10 @@ services:
       replicas: 1
       restart_policy:
         condition: on-failure
+      placement:
+        constraints:
+          - node.labels.db == true
 
-  
 
 networks:
   edge-net:
