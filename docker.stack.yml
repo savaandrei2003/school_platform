@@ -228,7 +228,7 @@ services:
         condition: on-failure
 
   frontend:
-    image: savaandrei2003/school-frontend:1.0.13
+    image: savaandrei2003/school-frontend:1.0.14
     networks:
       - edge-net
     deploy:

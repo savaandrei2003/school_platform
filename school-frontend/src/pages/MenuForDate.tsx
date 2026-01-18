@@ -98,7 +98,7 @@ export function MenuForDate() {
           setSearchParams({ childId: initial });
         }
 
-        const m = await apiGet<DailyMenu>(`${menusBase}/menus/daily?date=${date}`, token);
+        const m = await apiGet<DailyMenu>(`${menusBase}/daily?date=${date}`, token);
         setMenu(m);
 
         // preselect defaults
