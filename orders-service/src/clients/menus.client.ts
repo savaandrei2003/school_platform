@@ -27,7 +27,7 @@ export class MenusClient {
   }
 
   async validateOrder(dto: ValidateOrderRequest): Promise<ValidateOrderResponse> {
-    const token = await this.serviceToken.getServiceToken(); // <--- AICI
+    const token = await this.serviceToken.getServiceToken();
 
     // console.log('MenusClient.validateOrder called with token:', token);
 
@@ -35,7 +35,7 @@ export class MenusClient {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`, // <--- ȘI AICI
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(dto),
     });

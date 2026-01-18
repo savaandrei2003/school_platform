@@ -1,4 +1,3 @@
-// src/components/orders/SelectedDayOrdersPanel.tsx
 import React, { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Order } from "../../pages/Dashboard";
@@ -39,7 +38,7 @@ export function SelectedDayOrdersPanel({
   selectedDay,
   orders,
   childMap,
-  selectedChildId, // ✅
+  selectedChildId, 
   onCancelOrder,
   cancelingId,
 }: {
@@ -52,7 +51,6 @@ export function SelectedDayOrdersPanel({
 }) {
   const nav = useNavigate();
 
-  // ✅ show only ACTIVE + only selected child
   const visibleOrders = useMemo(() => {
     return (orders ?? []).filter((o) => o.status !== "CANCELED" && o.childId === selectedChildId);
   }, [orders, selectedChildId]);

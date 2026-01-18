@@ -1,13 +1,10 @@
-// src/common/time.ts
 
 export function parseISODateOnly(dateStr: string): Date {
-  // dateStr: "2026-01-04" -> Date UTC midnight
   const d = new Date(`${dateStr}T00:00:00.000Z`);
   if (Number.isNaN(d.getTime())) throw new Error("Invalid date");
   return d;
 }
 
-// Normalizează "azi" ca date-only (UTC) ca să compari corect cu parseISODateOnly
 export function todayDateOnlyUTC(now = new Date()): Date {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 }
@@ -25,13 +22,6 @@ export function isSameDayUTC(a: Date, b: Date): boolean {
     a.getUTCDate() === b.getUTCDate()
   );
 }
-
-/**
- * LOCK RULES:
- * - trecut -> LOCK
- * - azi după 09:00 -> LOCK
- * - viitor -> OK
- */
 
 function getCutoffHM() {
   const raw = process.env.ORDER_CUTOFF_TIME ?? '09:00:00';

@@ -10,7 +10,6 @@ export class UsersClient {
   }
 
   async assertChildBelongsToParent(childId: string, accessToken: string): Promise<void> {
-    // variantă simplă: cerem lista copiilor părintelui din user-service
     const res = await fetch(`${this.baseUrl}/users/children`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });

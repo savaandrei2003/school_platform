@@ -72,7 +72,6 @@ export function MenuForDate() {
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Load children + menu
   useEffect(() => {
     if (!authenticated || !token || !date) return;
 
@@ -93,7 +92,6 @@ export function MenuForDate() {
 
         setChildId(initial);
 
-        // ensure URL reflects chosen child (optional, but nice)
         if (initial && initial !== childIdFromQuery) {
           setSearchParams({ childId: initial });
         }
@@ -101,7 +99,6 @@ export function MenuForDate() {
         const m = await apiGet<DailyMenu>(`${menusBase}/daily?date=${date}`, token);
         setMenu(m);
 
-        // preselect defaults
         const defaults: Record<string, string> = {};
         for (const opt of m.options ?? []) {
           if (opt.isDefault) defaults[opt.category] = opt.id;
@@ -115,7 +112,6 @@ export function MenuForDate() {
     })();
   }, [authenticated, token, date, usersBase, menusBase, childIdFromQuery, setSearchParams]);
 
-  // Group options by category for UI
   const grouped = useMemo(() => {
     const g: Record<string, MenuOption[]> = {};
     for (const opt of menu?.options ?? []) {
@@ -137,7 +133,6 @@ export function MenuForDate() {
       }));
   }, [menu, picked]);
 
-  // Load existing order for (childId, date)
   const loadExistingOrder = useCallback(async () => {
     if (!token || !date || !childId) return;
     try {
@@ -270,7 +265,7 @@ export function MenuForDate() {
                     onChange={(e) => {
                       const v = e.target.value;
                       setChildId(v);
-                      setSearchParams({ childId: v }); // keep URL in sync
+                      setSearchParams({ childId: v }); 
                     }}
                     style={{
                       marginLeft: 8,

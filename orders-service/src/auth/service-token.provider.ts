@@ -22,9 +22,9 @@ export class ServiceTokenProvider {
       return this.cache.token;
     }
 
-    const kcBase = this.config.get<string>('KC_BASE_URL');   // http://keycloak:8080 sau http://localhost:8080
-    const realm = this.config.get<string>('KC_REALM');       // school_platform
-    const clientId = this.config.get<string>('KC_CLIENT_ID'); // orders-service
+    const kcBase = this.config.get<string>('KC_BASE_URL');  
+    const realm = this.config.get<string>('KC_REALM');      
+    const clientId = this.config.get<string>('KC_CLIENT_ID'); 
     const clientSecret = this.config.get<string>('KC_CLIENT_SECRET');
 
     if (!kcBase || !realm || !clientId || !clientSecret) {

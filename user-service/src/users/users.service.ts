@@ -20,14 +20,12 @@ export class UsersService {
   async provisionUserAndGetChildren(info: KeycloakUserInfo) {
     const { sub, email, roles } = info;
 
-    // 1. verificăm dacă utilizatorul există în MySQL
     let user = await this.prisma.appUser.findUnique({
       where: { id: sub },
     });
 
     let message = '';
 
-    // 2. dacă nu există → îl creăm
     if (!user) {
       user = await this.prisma.appUser.create({
         data: {
@@ -43,7 +41,6 @@ export class UsersService {
       message = 'User already exists';
     }
 
-    // 3. asociem copiii orfani (fără parentId) cu acest părinte, pe baza email-ului
     await this.prisma.child.updateMany({
       where: { parentEmail: email, parentId: null },
       data: { parentId: sub },

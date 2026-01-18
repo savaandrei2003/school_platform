@@ -45,7 +45,6 @@ export async function apiDelete<T = any>(url: string, token: string): Promise<T>
     },
   });
 
-  // unele endpoint-uri DELETE pot întoarce 204 No Content
   if (res.status === 204) return {} as T;
 
   if (!res.ok) {

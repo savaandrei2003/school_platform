@@ -14,7 +14,6 @@ export class MenusService {
   async createDailyMenu(dto: CreateDailyMenuDto) {
     const date = new Date(dto.date);
 
-    // opțional: asigură-te că există max 1 default per categorie
     const defaultsByCategory = new Map<string, number>();
     for (const opt of dto.options) {
       if (opt.isDefault) {
@@ -46,8 +45,7 @@ export class MenusService {
         include: { options: true },
       });
     } catch (e: any) {
-      // date unique constraint
-      // console.log(e);
+
       throw new BadRequestException('DailyMenu already exists for this date');
     }
   }
@@ -80,7 +78,6 @@ export class MenusService {
     if (!menu) throw new NotFoundException('DailyMenu not found');
 
     const orderDate = new Date(dto.orderDate);
-    // comparăm doar data (UTC vs local poate fi tricky; pentru proiect merge ok dacă folosești @db.Date)
     const menuDateISO = menu.date.toISOString().slice(0, 10);
     const orderDateISO = orderDate.toISOString().slice(0, 10);
     if (menuDateISO !== orderDateISO) {
@@ -101,7 +98,6 @@ export class MenusService {
       }
     }
 
-    // poți întoarce și denumiri ca să fie ușor de raportat
     return {
       ok: true,
       menuId: menu.id,
@@ -118,7 +114,6 @@ export class MenusService {
     const from = new Date(fromStr);
     const to = new Date(toStr);
 
-    // include și ziua "to": setăm până la finalul zilei
     to.setHours(23, 59, 59, 999);
 
     return this.prisma.dailyMenu.findMany({

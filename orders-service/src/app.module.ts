@@ -10,7 +10,7 @@ import { MessagingModule } from './messaging/messaging.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ScheduleModule.forRoot(),
-    MessagingModule,     // ✅ ADD
+    MessagingModule,  
     PrismaModule,
     AuthModule,
     OrdersModule,

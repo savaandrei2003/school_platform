@@ -18,7 +18,6 @@ import { RolesGuard } from '../auth/role.guards';
 export class MenusController {
   constructor(private readonly menus: MenusService) {}
 
-  // ADMIN: creează meniul zilei
   @UseGuards(KeycloakAuthGuard, RolesGuard)
   @Roles('admin')
   @Post('daily')
@@ -26,7 +25,6 @@ export class MenusController {
     return this.menus.createDailyMenu(dto);
   }
 
-  // oricine autentificat poate vedea meniul zilei (sau poți lăsa public)
   @UseGuards(KeycloakAuthGuard)
   @Get('daily')
   async getByDate(@Query('date') date: string) {

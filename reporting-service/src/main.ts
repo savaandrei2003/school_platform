@@ -8,7 +8,7 @@ import mysql from "mysql2/promise";
 
 const PORT = Number(process.env.PORT || 3003);
 const ARTIFACT_DIR = process.env.ARTIFACT_DIR || path.join(process.cwd(), "artifacts");
-const CRON_DAILY = process.env.CRON_DAILY || "0 9 * * *"; // 09:00
+const CRON_DAILY = process.env.CRON_DAILY || "0 9 * * *";
 const REPLICA_LAG_MAX_SECONDS = Number(process.env.REPLICA_LAG_MAX_SECONDS || 10);
 const QUERY_TIMEOUT_MS = Number(process.env.QUERY_TIMEOUT_MS || 15000);
 
@@ -55,25 +55,18 @@ function mkPool(prefix: "REPLICA" | "META") {
     connectionLimit: prefix === "REPLICA" ? 10 : 5,
     enableKeepAlive: true,
     timezone: "local",
-    dateStrings: true, // Forțează driverul să citească datele ca string-uri, evitând conversia în obiecte Date de JS
-    // typeCast: function (field, next) {
-    //   if (field.type === 'DATETIME') {
-    //     return field.string(); // Returnează data exact cum e în DB
-    //   }
-    //   return next();
-    // }
+    dateStrings: true, 
   });
 }
 
-const replicaPool = mkPool("REPLICA"); // heavy reads
-const metaPool = mkPool("META"); // small writes
+const replicaPool = mkPool("REPLICA");
+const metaPool = mkPool("META");
 
 async function ensureDirs() {
   await fs.mkdir(ARTIFACT_DIR, { recursive: true });
 }
 
 async function applyMigrations() {
-  // Supports running inside docker (/app) or locally (cwd)
   const candidates = [
     path.join("/app/migrations", "001_reports.sql"),
     path.join(process.cwd(), "migrations", "001_reports.sql"),
@@ -85,7 +78,7 @@ async function applyMigrations() {
       sql = await fs.readFile(p, "utf-8");
       break;
     } catch {
-      // ignore
+    
     }
   }
 
@@ -94,8 +87,7 @@ async function applyMigrations() {
 }
 
 async function getReplicaLagSeconds(): Promise<{ isReplica: boolean; lagSeconds: number | null }> {
-  // MySQL 8: SHOW REPLICA STATUS (returns 0 rows if not a replica)
-  // (older MySQL used SHOW SLAVE STATUS)
+
   const [rows] = await replicaPool.query<any[]>("SHOW REPLICA STATUS");
   if (!rows || rows.length === 0) return { isReplica: false, lagSeconds: null };
 
@@ -114,7 +106,6 @@ async function createOrGetRunning(type: string, reportDate: string): Promise<{ i
     );
     return { id, status: "RUNNING", created: true };
   } catch (e: any) {
-    // likely duplicate on UNIQUE(type, report_date)
     const [rows] = await metaPool.execute<any[]>(
       `SELECT id, status FROM reports WHERE type=? AND report_date=? LIMIT 1`,
       [type, reportDate]
@@ -160,8 +151,7 @@ function pick(items: SnapshotItem[], cat: MenuCategory): string {
 }
 
 async function generateDaily(reportDate: string): Promise<{ rows: DailyRow[]; summary: any }> {
-  // Prisma tables likely named exactly like models: `Order`, `OrderSelection`, `Child`
-  // `Order` is reserved -> backticks required
+
   const sql = `
     SELECT
       o.childId AS childId,
@@ -179,8 +169,7 @@ async function generateDaily(reportDate: string): Promise<{ rows: DailyRow[]; su
 
   const conn = await replicaPool.getConnection();
   try {
-    // Query timeout (ms) in MySQL 8 via MAX_EXECUTION_TIME in optimizer hint or session variable.
-    // This session var works for SELECT in many setups:
+
     await conn.query(`SET SESSION MAX_EXECUTION_TIME=${QUERY_TIMEOUT_MS}`);
 
     const [rows] = await conn.execute<any[]>(sql, [reportDate]);
@@ -273,7 +262,6 @@ async function runDaily(reportDate: string) {
     return { reportId: id, skipped: true };
   }
 
-  // Advanced gating: replica lag
   const lag = await getReplicaLagSeconds();
   if (lag.isReplica && lag.lagSeconds != null && lag.lagSeconds > REPLICA_LAG_MAX_SECONDS) {
     const msg = `Replica lag too high: ${lag.lagSeconds}s > ${REPLICA_LAG_MAX_SECONDS}s`;
@@ -305,13 +293,11 @@ async function runDaily(reportDate: string) {
   }
 }
 
-// ------------------- API -------------------
 const app = express();
 app.use(express.json());
 
 app.get("/health", (_req, res) => res.status(200).send("ok"));
 
-// manual trigger: POST /jobs/daily?date=YYYY-MM-DD
 app.post("/jobs/daily", async (req, res) => {
   const date = String(req.query.date || "");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -325,7 +311,6 @@ app.post("/jobs/daily", async (req, res) => {
   }
 });
 
-// list reports
 app.get("/reports", async (req, res) => {
   const type = String(req.query.type || "");
   const from = String(req.query.from || "");
@@ -365,7 +350,6 @@ app.get("/reports", async (req, res) => {
   }
 });
 
-// get report
 app.get("/reports/:id", async (req, res) => {
   const id = req.params.id;
   const [rows] = await metaPool.execute<any[]>(
@@ -394,7 +378,6 @@ app.get("/reports/:id", async (req, res) => {
   res.json(rows[0]);
 });
 
-// download
 app.get("/reports/:id/download", async (req, res) => {
   const id = req.params.id;
   const format = String(req.query.format || "csv");
@@ -414,7 +397,6 @@ app.get("/reports/:id/download", async (req, res) => {
   res.sendFile(filePath);
 });
 
-// boot
 async function main() {
   await ensureDirs();
   await applyMigrations();

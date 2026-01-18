@@ -19,7 +19,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     keycloak
       .init({
-        onLoad: "check-sso", // nu forțează login; noi îl cerem când apasă user
+        onLoad: "check-sso", 
         pkceMethod: "S256",
         checkLoginIframe: false,
       })
@@ -35,7 +35,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const refreshed = await keycloak.updateToken(30);
         if (refreshed) setToken(keycloak.token ?? null);
       } catch {
-        // dacă expiră și nu poate refresh, îl scoatem
         setAuthenticated(false);
         setToken(null);
       }

@@ -18,7 +18,6 @@ export class RolesGuard implements CanActivate {
         context.getClass(),
       ]);
 
-    // dacă ruta nu are @Roles → e permisă
     if (!requiredRoles) {
       return true;
     }

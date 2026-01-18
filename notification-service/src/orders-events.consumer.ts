@@ -15,7 +15,6 @@ export class OrdersEventsConsumer {
     queueOptions: { durable: true },
   })
   async handleOrderConfirmed(msg: OrderConfirmedEvent) {
-    // minimal validation
     if (!msg?.data?.parent?.email) {
       this.logger.warn('Missing parent email; skipping message');
       return;

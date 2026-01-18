@@ -1,4 +1,3 @@
-// src/pages/Dashboard.tsx
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import { apiGet, apiDelete } from "../api/http";
@@ -39,10 +38,8 @@ export function Dashboard() {
   const [cancelingId, setCancelingId] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState(() => todayISODate());
 
-  // ✅ SINGLE SOURCE OF TRUTH
   const [selectedChildId, setSelectedChildId] = useState<string>("");
 
-  // preview range (din BulkDefaultsPanel)
   const [highlight, setHighlight] = useState<HighlightRange | null>(null);
 
   const reload = useCallback(async () => {
@@ -57,7 +54,6 @@ export function Dashboard() {
       const ordRes = await apiGet<Order[]>(`${ordersBase}/orders`, token);
       setOrders(ordRes);
 
-      // ✅ auto select first child (only once / if missing)
       const firstChildId = meRes?.children?.[0]?.id ?? "";
       setSelectedChildId((prev) => prev || firstChildId);
     } catch (e: any) {
@@ -190,7 +186,7 @@ export function Dashboard() {
               ordersBase={ordersBase}
               children={me?.children ?? []}
               selectedDay={selectedDay}
-              selectedChildId={selectedChildId}        // ✅ PROPAGATED
+              selectedChildId={selectedChildId}        
               onPreviewRange={setHighlight}
               onDone={reload}
             />
@@ -201,7 +197,7 @@ export function Dashboard() {
               selectedDay={selectedDay}
               orders={selectedOrders}
               childMap={childMap}
-              selectedChildId={selectedChildId}        // ✅ PROPAGATED
+              selectedChildId={selectedChildId}        
               onCancelOrder={cancelOrder}
               cancelingId={cancelingId}
             />

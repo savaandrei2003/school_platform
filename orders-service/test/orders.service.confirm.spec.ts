@@ -12,7 +12,6 @@ describe('OrdersService - confirmTodayIfAfterCutoff', () => {
     $queryRaw: jest.fn(),
     $executeRaw: jest.fn(),
     order: {
-      // nu le folosim în testele de confirm
       findUnique: jest.fn(),
       upsert: jest.fn(),
       findMany: jest.fn(),
@@ -30,7 +29,7 @@ describe('OrdersService - confirmTodayIfAfterCutoff', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    process.env.ORDER_CONFIRMATION = '00:00:00'; // ca să “treacă de cutoff” în query
+    process.env.ORDER_CONFIRMATION = '00:00:00';
 
     const moduleRef = await Test.createTestingModule({
       providers: [
@@ -86,7 +85,6 @@ describe('OrdersService - confirmTodayIfAfterCutoff', () => {
     expect(prismaMock.$executeRaw).toHaveBeenCalledTimes(1);
     expect(publisherMock.publishOrderConfirmed).toHaveBeenCalledTimes(2);
 
-    // verifică “payload shape” minimal
     const call1 = publisherMock.publishOrderConfirmed.mock.calls[0][0];
     expect(call1.orderId).toBe('o1');
     expect(call1.parent.email).toBe('p1@test.com');

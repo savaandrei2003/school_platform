@@ -35,11 +35,7 @@ export class OrdersService implements OnModuleInit {
     private readonly publisher: OrdersEventsPublisher,
   ) {}
 
-  /**
-   * Fallback safety:
-   * - dacă aplicația pornește după 09:00, confirmă comenzile PENDING de azi.
-   * - dacă cron-ul a fost ratat (restart/deploy), tot se repară.
-   */
+
   async onModuleInit() {
     await this.confirmTodayIfAfterCutoff();
   }
@@ -50,38 +46,10 @@ export class OrdersService implements OnModuleInit {
     return auth.substring('Bearer '.length);
   }
 
-  /**
-   * Confirmă automat comenzile PENDING de AZI dacă e după 09:00.
-   * Rulează safe (idempotent).
-   */
-  // private async confirmTodayIfAfterCutoff(now = new Date()) {
-  //   const cutoff = new Date(now);
-  //   cutoff.setHours(9, 0, 0, 0);
-
-  //   // înainte de 09:00 nu confirmăm
-  //   if (now < cutoff) return;
-
-  //   const start = new Date(now);
-  //   start.setHours(0, 0, 0, 0);
-
-  //   const end = new Date(now);
-  //   end.setHours(23, 59, 59, 999);
-
-  //   await this.prisma.order.updateMany({
-  //     where: {
-  //       status: OrderStatus.PENDING,
-  //       orderDate: { gte: start, lte: end },
-  //     },
-  //     data: {
-  //       status: OrderStatus.CONFIRMED,
-  //     },
-  //   });
-  // }
 
   public async confirmTodayIfAfterCutoff() {
     const cutoff = process.env.ORDER_CONFIRMATION ?? '09:00:00';
 
-    // 1) ia PENDING de azi direct din DB (în timezone-ul DB)
     const pending = await this.prisma.$queryRaw<any[]>`
     SELECT o.id, o.childId, o.parentSub, o.parentEmail, o.orderDate, os.snapshot
     FROM \`Order\` o
@@ -93,7 +61,6 @@ export class OrdersService implements OnModuleInit {
 
     if (pending.length === 0) return;
 
-    // 2) confirmă
     await this.prisma.$executeRaw`
     UPDATE \`Order\`
     SET status = 'CONFIRMED'
@@ -102,7 +69,6 @@ export class OrdersService implements OnModuleInit {
       AND CURRENT_TIME() > ${cutoff}
   `;
 
-    // 3) publish events
     for (const o of pending) {
       const snap = (o.snapshot as any[]) || [];
       const pick = (cat: string) =>
@@ -130,24 +96,20 @@ export class OrdersService implements OnModuleInit {
     const parentSub = user.sub;
     const parentEmail = user.email ?? '';
 
-    // 1) parse dates
     const orderDate = parseISODateOnly(dto.orderDate);
     const menuDate = orderDate;
 
-    // 2) cutoff
     if (isOrderLockedForDate(orderDate)) {
       throw new BadRequestException(
         'Orders are locked for this date (past date or today after 09:00).',
       );
     }
 
-    // 3) child ownership via user-service (token user)
     const userToken = this.extractBearer(req);
     if (!userToken) throw new ForbiddenException('Missing bearer token');
 
     await this.usersClient.assertChildBelongsToParent(dto.childId, userToken);
 
-    // 4) validate against menu-service (token service inside MenusClient)
     const validation = (await this.menusClient.validateOrder({
       dailyMenuId: dto.dailyMenuId,
       orderDate: dto.orderDate,
@@ -158,7 +120,6 @@ export class OrdersService implements OnModuleInit {
       throw new BadRequestException('Menu validation failed');
     }
 
-    // 5) check existing for ownership rule
     const existing = await this.prisma.order.findUnique({
       where: {
         childId_orderDate: {
@@ -173,13 +134,11 @@ export class OrdersService implements OnModuleInit {
       throw new ForbiddenException('Cannot modify order not owned by you');
     }
 
-    // 6) JSON casting for Prisma
     const choicesJson = dto.selections as unknown as Prisma.InputJsonValue;
 
     const snapshotJson = (validation.normalizedSelections ??
       null) as unknown as Prisma.InputJsonValue;
 
-    // 7) upsert
     return this.prisma.order.upsert({
       where: {
         childId_orderDate: {
@@ -254,7 +213,6 @@ export class OrdersService implements OnModuleInit {
   }
 
   async listForParent(parentSub: string, q: ListOrdersQueryDto) {
-    // fallback: dacă e după 09:00 și au rămas PENDING azi, le confirmăm
     await this.confirmTodayIfAfterCutoff();
 
     const where: any = { parentSub };
@@ -273,7 +231,6 @@ export class OrdersService implements OnModuleInit {
   }
 
   async listToday(parentSub: string) {
-    // fallback: dacă e după 09:00 și au rămas PENDING azi, le confirmăm
     await this.confirmTodayIfAfterCutoff();
 
     const now = new Date();
@@ -303,14 +260,10 @@ export class OrdersService implements OnModuleInit {
     const userToken = this.extractBearer(req);
     if (!userToken) throw new ForbiddenException('Missing bearer token');
 
-    // 1) ownership check o singură dată
     await this.usersClient.assertChildBelongsToParent(dto.childId, userToken);
 
-    // 2) ia meniurile din interval (NECESITĂ: MenusClient.getDailyMenusRange)
     const menus = await this.menusClient.getDailyMenusRange(dto.from, dto.to);
-    // fiecare menu: { id, date, options: [{id, category, name, isDefault}] }
 
-    // 3) protecție: nu modifici comenzi ale altui părinte pe interval
     const fromDate = parseISODateOnly(dto.from.slice(0, 10));
     const toDate = parseISODateOnly(dto.to.slice(0, 10));
     const existing = await this.prisma.order.findMany({
@@ -330,14 +283,12 @@ export class OrdersService implements OnModuleInit {
     const ops: Prisma.PrismaPromise<any>[] = [];
 
     for (const m of menus) {
-      // date din DB -> normalizezi la date-only
       const dateISO = new Date(m.date).toISOString().slice(0, 10);
       const orderDate = parseISODateOnly(dateISO);
       const menuDate = orderDate;
 
-      // cutoff (dacă vrei “skip”, rămâne așa; dacă vrei fail fast, înlocuiești cu throw)
       if (isOrderLockedForDate(orderDate)) {
-        continue; // sau throw dacă vrei fail-fast
+        continue; 
       }
 
       const byCat = (cat: string) =>
@@ -352,9 +303,8 @@ export class OrdersService implements OnModuleInit {
       const soup = pickDefault('SOUP');
       const main = pickDefault('MAIN');
       const dessert = pickDefault('DESSERT');
-      const reserve = pickDefault('RESERVE'); // opțional
+      const reserve = pickDefault('RESERVE');
 
-      // dacă lipsește ceva obligatoriu, sari peste zi
       if (!soup || !main || !dessert) continue;
 
       const selections = [

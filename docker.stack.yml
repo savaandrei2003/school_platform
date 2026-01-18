@@ -93,7 +93,6 @@ services:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
 
-      # IMPORTANT pentru reverse proxy pe /auth
       KC_PROXY: edge
       KC_HTTP_RELATIVE_PATH: /auth
       KC_HOSTNAME_STRICT: "false"
@@ -114,7 +113,6 @@ services:
     networks:
       - mq-net
       - edge-net
-    # daca vrei UI public, lasa ports. daca nu, scoate-le.
     ports:
       - target: 5672
         published: 5672
@@ -134,7 +132,6 @@ services:
     networks:
       - smtp-net
       - edge-net
-    # daca vrei UI public, lasa ports. daca nu, scoate-le.
     ports:
       - target: 8025
         published: 8025
@@ -150,7 +147,7 @@ services:
         condition: on-failure
 
   user-service:
-    image: savaandrei2003/user-service:1.0.3
+    image: savaandrei2003/user-service:1.1.0
     env_file:
       - ./user-service/.env.docker
     networks:
@@ -162,7 +159,7 @@ services:
         condition: on-failure
 
   menu-service:
-    image: savaandrei2003/menu-service:1.0.3
+    image: savaandrei2003/menu-service:1.1.0
     env_file:
       - ./menu-service/.env.docker
     networks:
@@ -174,7 +171,7 @@ services:
         condition: on-failure
 
   orders-service:
-    image: savaandrei2003/orders-service:1.0.4
+    image: savaandrei2003/orders-service:1.1.0
     environment:
       TZ: Europe/Bucharest
     env_file:
@@ -189,7 +186,7 @@ services:
         condition: on-failure
 
   reporting-service:
-    image: savaandrei2003/reporting-service:1.0.3
+    image: savaandrei2003/reporting-service:1.1.0
     environment:
       TZ: Europe/Bucharest
       TIMEZONE: Europe/Bucharest
@@ -212,7 +209,7 @@ services:
         condition: on-failure
 
   notification-service:
-    image: savaandrei2003/notification-service:1.0.3
+    image: savaandrei2003/notification-service:1.1.0
     environment:
       TZ: Europe/Bucharest
     env_file:
@@ -228,7 +225,7 @@ services:
         condition: on-failure
 
   frontend:
-    image: savaandrei2003/school-frontend:1.0.14
+    image: savaandrei2003/school-frontend:1.1.0
     networks:
       - edge-net
     deploy:

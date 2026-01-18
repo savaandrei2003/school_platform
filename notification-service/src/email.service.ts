@@ -7,7 +7,7 @@ export type OrderConfirmedEvent = {
   type: 'order.confirmed';
   data: {
     orderId: string;
-    orderDate: string; // YYYY-MM-DD
+    orderDate: string;
     child: { id: string; name: string; class: string };
     parent: { sub: string; email: string };
     menu?: {

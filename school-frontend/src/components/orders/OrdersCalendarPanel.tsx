@@ -1,4 +1,3 @@
-// src/components/orders/OrdersCalendarPanel.tsx
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Order } from "../../pages/Dashboard";
@@ -11,7 +10,6 @@ function toYMD(d: Date) {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
-// Monday-first index: Mon=0..Sun=6 (JS: Sun=0..Sat=6)
 function mondayFirstIndex(jsDay: number) {
   return (jsDay + 6) % 7;
 }
@@ -78,12 +76,10 @@ export function OrdersCalendarPanel({
     return { start, end };
   }, [cursor]);
 
-  // 🔥 IMPORTANT: ignorăm CANCELED în tot ce înseamnă “vizibil în calendar”
   const visibleOrders = useMemo(() => {
     return (orders ?? []).filter((o) => o.status !== "CANCELED");
   }, [orders]);
 
-  // grupăm toate comenzile pe zile (dar META/culoarea o facem per copil selectat)
   const ordersByDay = useMemo(() => {
     const m = new Map<string, Order[]>();
     for (const o of visibleOrders) {
@@ -93,18 +89,16 @@ export function OrdersCalendarPanel({
     return m;
   }, [visibleOrders]);
 
-  // ✅ per copil: culoarea zilei depinde doar de copilul selectat
   function dayMeta(day: string) {
-    if (!selectedChildId) return null; // fără copil => calendar "neutru"
+    if (!selectedChildId) return null; 
 
     const listAll = ordersByDay.get(day) ?? [];
-    const list = listAll.filter((o) => o.childId === selectedChildId); // ✅ per copil
+    const list = listAll.filter((o) => o.childId === selectedChildId); 
     if (!list.length) return null;
 
     const hasPending = list.some((o) => o.status === "PENDING");
     const hasConfirmed = list.some((o) => o.status === "CONFIRMED");
 
-    // PENDING = verde, CONFIRMED = mov
     if (hasPending) return { tone: "pending" as const, text: "ORDER" };
     if (hasConfirmed) return { tone: "confirmed" as const, text: "CONFIRMED" };
     return null;
@@ -139,7 +133,6 @@ export function OrdersCalendarPanel({
     return chunks;
   }, [range]);
 
-  // ✅ Update/Continuă depinde de (zi + copil selectat) și ignoră CANCELED
   const hasOrderForSelectedChild = useMemo(() => {
     if (!selectedChildId) return false;
     const list = ordersByDay.get(selectedDay) ?? [];
@@ -154,7 +147,7 @@ export function OrdersCalendarPanel({
   const today = useMemo(() => todayYMDLocal(), []);
   const afterCutoffToday = useMemo(() => isAfterCutoffLocal(), []);
 
-  const isPastDay = (day: string) => day < today; // YYYY-MM-DD compares lexicographically OK
+  const isPastDay = (day: string) => day < today; 
   const isTodayLocked = (day: string) => day === today && afterCutoffToday;
 
   function cellStyle(day: string, selected: boolean, inMonth: boolean): React.CSSProperties {
@@ -174,13 +167,11 @@ export function OrdersCalendarPanel({
       transition: "transform 120ms ease, opacity 120ms ease",
     };
 
-    // ✅ culori: PENDING=verde, CONFIRMED=mov (doar pt copilul selectat)
     let styled = base;
     if (!meta) styled = base;
     else if (meta.tone === "pending") styled = { ...base, background: "#e6ffef", border: "1px solid #b7f0c7" };
     else if (meta.tone === "confirmed") styled = { ...base, background: "#f2e8ff", border: "1px solid #d3b7ff" };
 
-    // Past days: fade + not-allowed, păstrând culoarea
     if (isPastDay(day)) {
       styled = {
         ...styled,
@@ -192,7 +183,6 @@ export function OrdersCalendarPanel({
     return styled;
   }
 
-  // ca să mergi mai departe trebuie copil selectat + zi validă
   const canGo = !!selectedChildId && !isPastDay(selectedDay) && !isTodayLocked(selectedDay);
 
   const selectedChild = useMemo(() => {
@@ -315,7 +305,7 @@ export function OrdersCalendarPanel({
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div style={{ fontWeight: 900 }}>{day.getDate()}</div>
 
-                      {/* dot: verde PENDING, mov CONFIRMED, altfel transparent (per copil selectat) */}
+                      {/*  */}
                       <span
                         style={{
                           width: 10,

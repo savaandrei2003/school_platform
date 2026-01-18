@@ -58,7 +58,7 @@ export function Profile() {
       const payload = {
         name: edit[childId]?.name ?? "",
         class: edit[childId]?.class ?? "",
-        // alergii: acceptăm fie listă (split după virgulă) fie text
+        // alergii
         allergies: (edit[childId]?.allergiesText ?? "")
           .split(",")
           .map(s => s.trim())

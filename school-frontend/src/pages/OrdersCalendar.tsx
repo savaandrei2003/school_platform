@@ -8,7 +8,7 @@ type MeResponse = { user: any; children: Child[] };
 type Order = {
   id: string;
   childId: string;
-  orderDate: string; // ISO string
+  orderDate: string; 
   status: "PENDING" | "CONFIRMED" | "CANCELED";
   selection?: { choices: any; snapshot?: any };
 };
@@ -21,7 +21,6 @@ function toYMD(d: Date) {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
-// Monday-first index: Mon=0..Sun=6
 function mondayFirstIndex(jsDay: number) {
   // JS: Sun=0..Sat=6
   return (jsDay + 6) % 7;

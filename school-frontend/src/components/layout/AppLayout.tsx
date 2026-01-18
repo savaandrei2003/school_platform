@@ -8,16 +8,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
         height: "98vh",
         display: "flex",
         flexDirection: "column",
-        overflow: "hidden", // nu lăsa nimic să creeze scroll global
+        overflow: "hidden",
         fontFamily: "system-ui",
       }}
     >
       <Navbar />
       <div
         style={{
-          flex: 1,            // ia tot ce rămâne după navbar
-          minHeight: 0,       // CRUCIAL pentru scroll intern
-          overflow: "hidden", // scroll doar în copii
+          flex: 1,            
+          minHeight: 0,       
+          overflow: "hidden", 
         }}
       >
         {children}

@@ -1,4 +1,3 @@
-// src/components/orders/BulkDefaultsPanel.tsx
 import { useEffect, useMemo, useState } from "react";
 import { apiPost } from "../../api/http";
 import type { HighlightRange } from "./OrdersCalendarPanel";
@@ -47,7 +46,7 @@ export function BulkDefaultsPanel({
   ordersBase,
   children,
   selectedDay,
-  selectedChildId,                 // ✅ SINGLE SOURCE
+  selectedChildId,                 
   onPreviewRange,
   onDone,
 }: {
@@ -55,14 +54,13 @@ export function BulkDefaultsPanel({
   ordersBase: string;
   children: Child[];
   selectedDay: string;
-  selectedChildId: string;         // ✅
+  selectedChildId: string;         
   onPreviewRange: (r: HighlightRange | null) => void;
   onDone: () => void;
 }) {
   const [period, setPeriod] = useState<DefaultPeriod>("MONTH");
   const [previewOn, setPreviewOn] = useState(false);
 
-  // ✅ categories only (child comes from Dashboard)
   const [cats, setCats] = useState<DefaultCategories>({
     SOUP: true,
     MAIN: true,
@@ -88,7 +86,6 @@ export function BulkDefaultsPanel({
   useEffect(() => {
     if (!previewOn) return;
     onPreviewRange({ ...range, active: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [previewOn, range.from, range.to]);
 
   const hasAnyCategory = cats.SOUP || cats.MAIN || cats.DESSERT || cats.RESERVE;
@@ -126,7 +123,7 @@ export function BulkDefaultsPanel({
       setLoading(true);
 
       await apiPost(`${ordersBase}/orders/monthly-defaults`, token, {
-        childId: selectedChildId,     // ✅ comes from dashboard
+        childId: selectedChildId,    
         from: range.from,
         to: range.to,
       });

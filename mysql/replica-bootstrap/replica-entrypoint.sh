@@ -28,11 +28,9 @@ until mysqladmin ping -h mysql --silent; do
 done
 echo "[replica] source is reachable"
 
-# dezactivează temporar read-only ca să poți rula RESET/CHANGE + CREATE DATABASE
 echo "[replica] disabling read-only for bootstrap..."
 mysql_cmd -e "SET GLOBAL super_read_only=OFF; SET GLOBAL read_only=OFF;" || true
 
-# MINIM: creează DB-ul ca să nu crape pe "Unknown database"
 echo "[replica] ensuring schooldb exists (bootstrap)..."
 mysql_cmd -e "CREATE DATABASE IF NOT EXISTS schooldb;"
 
@@ -60,7 +58,6 @@ else
   echo "[replica] replication started"
 fi
 
-# pune read-only la loc doar dacă replicarea merge
 status2="$(mysql_cmd -e "SHOW REPLICA STATUS\G" 2>/dev/null || true)"
 sql2="$(printf "%s" "$status2" | awk -F': ' '/Replica_SQL_Running:/ {print $2}')"
 if [ "$sql2" = "Yes" ]; then
