@@ -174,7 +174,7 @@ services:
         condition: on-failure
 
   orders-service:
-    image: savaandrei2003/orders-service:1.0.3
+    image: savaandrei2003/orders-service:1.0.4
     environment:
       TZ: Europe/Bucharest
     env_file:
@@ -223,7 +223,7 @@ services:
       - smtp-net
       - db-net
     deploy:
-      replicas: 1
+      replicas: 2
       restart_policy:
         condition: on-failure
 

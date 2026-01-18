@@ -1,9 +1,21 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { KeycloakAuthGuard } from '../auth/keycloak-auth.guard';
 import { PlaceOrderDto } from './dto/place-order.dto';
 import { ListOrdersQueryDto } from './dto/list-orders.query.dto';
 import { PlaceMonthDefaultsDto } from './dto/place-month-defaults.dto';
+import { RolesGuard } from 'src/auth/role.guards';
+import { Roles } from 'src/auth/role.decorator';
 
 @Controller('orders')
 export class OrdersController {
@@ -37,5 +49,12 @@ export class OrdersController {
   @Post('monthly-defaults')
   async monthlyDefaults(@Req() req: any, @Body() dto: PlaceMonthDefaultsDto) {
     return this.orders.placeMonthlyDefaults(req, dto);
+  }
+
+  @UseGuards(KeycloakAuthGuard, RolesGuard)
+  @Roles('admin')
+  @Post('admin/confirm-today')
+  async confirmTodayNow() {
+    return this.orders.confirmTodayForce();
   }
 }

@@ -79,9 +79,7 @@ export class OrdersService implements OnModuleInit {
   // }
 
   public async confirmTodayIfAfterCutoff() {
-
     const cutoff = process.env.ORDER_CONFIRMATION ?? '09:00:00';
-
 
     // 1) ia PENDING de azi direct din DB (în timezone-ul DB)
     const pending = await this.prisma.$queryRaw<any[]>`
@@ -92,7 +90,6 @@ export class OrdersService implements OnModuleInit {
       AND DATE(o.orderDate) = CURDATE()
       AND CURRENT_TIME() > ${cutoff}
   `;
-
 
     if (pending.length === 0) return;
 
@@ -423,5 +420,45 @@ export class OrdersService implements OnModuleInit {
       from: dto.from,
       to: dto.to,
     };
+  }
+
+  public async confirmTodayForce() {
+    const pending = await this.prisma.$queryRaw<any[]>`
+    SELECT o.id, o.childId, o.parentSub, o.parentEmail, o.orderDate, os.snapshot
+    FROM \`Order\` o
+    LEFT JOIN OrderSelection os ON os.orderId = o.id
+    WHERE o.status = 'PENDING'
+      AND DATE(o.orderDate) = CURDATE()
+  `;
+
+    if (pending.length === 0) return { ok: true, confirmed: 0 };
+
+    await this.prisma.$executeRaw`
+    UPDATE \`Order\`
+    SET status = 'CONFIRMED'
+    WHERE status = 'PENDING'
+      AND DATE(orderDate) = CURDATE()
+  `;
+
+    for (const o of pending) {
+      const snap = (o.snapshot as any[]) || [];
+      const pick = (cat: string) =>
+        snap.find((x: any) => x.category === cat)?.optionName || '';
+
+      await this.publisher.publishOrderConfirmed({
+        orderId: o.id,
+        orderDate: String(o.orderDate).slice(0, 10),
+        child: { id: o.childId, name: '', class: '' },
+        parent: { sub: o.parentSub, email: o.parentEmail },
+        menu: {
+          soup: pick('SOUP'),
+          main: pick('MAIN'),
+          dessert: pick('DESSERT'),
+          reserve: pick('RESERVE'),
+        },
+      });
+    }
+
+    return { ok: true, confirmed: pending.length };
   }
 }
